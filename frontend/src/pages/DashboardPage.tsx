@@ -16,8 +16,10 @@ import {
   DialogActions,
   Snackbar,
   Paper,
+  Stack,
   useTheme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   ContentCopy as CopyIcon,
   Refresh as RefreshIcon,
@@ -98,156 +100,203 @@ export function DashboardPage() {
     return `${prefix}${middle}${suffix}`;
   };
 
+  const glassCardSx = {
+    borderRadius: 3,
+    backgroundColor: theme.glass.background,
+    backdropFilter: "blur(14px)",
+    border: `1px solid ${theme.palette.divider}`,
+    transition: "all 0.25s ease",
+    boxShadow: `0 8px 28px ${alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.24 : 0.07)}`,
+    "&:hover": {
+      transform: "translateY(-2px)",
+      borderColor: alpha(theme.palette.primary.main, 0.4),
+      boxShadow: `0 14px 34px ${alpha(theme.palette.primary.main, 0.2)}`,
+    },
+  };
+
   if (isLoading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 8, display: "flex", justifyContent: "center" }}>
-        <CircularProgress />
-      </Container>
+      <Box sx={{ minHeight: "calc(100vh - 64px)", background: theme.pageBackground, py: { xs: 3, md: 4 } }}>
+        <Container maxWidth="lg">
+          <Paper sx={{ ...glassCardSx, p: 3, display: "flex", justifyContent: "center" }}>
+            <CircularProgress />
+          </Paper>
+        </Container>
+      </Box>
     );
   }
 
   if (!isAuthenticated || !user) {
     return (
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Alert severity="info">
-          请先登录以访问控制台
-          <Button onClick={() => navigate("/")} sx={{ ml: 2 }}>
-            返回首页
-          </Button>
-        </Alert>
-      </Container>
+      <Box sx={{ minHeight: "calc(100vh - 64px)", background: theme.pageBackground, py: { xs: 3, md: 4 } }}>
+        <Container maxWidth="lg">
+          <Paper sx={{ ...glassCardSx, p: 2.2 }}>
+            <Alert severity="info">
+              请先登录以访问控制台
+              <Button onClick={() => navigate("/")} sx={{ ml: 2 }}>
+                返回首页
+              </Button>
+            </Alert>
+          </Paper>
+        </Container>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-        <Typography variant="h3" component="h1">
-          控制台
-        </Typography>
-        <Button startIcon={<LogoutIcon />} onClick={logout} variant="outlined" color="error">
-          登出
-        </Button>
-      </Box>
-
-      {/* 用户信息卡片 */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-            <Avatar src={user.avatarUrl || undefined} alt={user.username} sx={{ width: 80, height: 80, mr: 3 }}>
-              {user.username.charAt(0).toUpperCase()}
-            </Avatar>
-            <Box>
-              <Typography variant="h5">{user.username}</Typography>
-              {user.email && (
-                <Typography variant="body2" color="text.secondary">
-                  {user.email}
-                </Typography>
-              )}
-              <Typography variant="caption" color="text.secondary">
-                注册时间: {new Date(user.createdAt).toLocaleString("zh-CN")}
-              </Typography>
-            </Box>
-          </Box>
-
-          <Box sx={{ mt: 3 }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-              <Typography variant="h6">API 密钥</Typography>
-              <Button
-                startIcon={<RefreshIcon />}
-                onClick={() => setRegenerateDialogOpen(true)}
-                variant="outlined"
-                size="small"
+    <Box
+      sx={{
+        minHeight: "calc(100vh - 64px)",
+        background: theme.pageBackground,
+        py: { xs: 3, md: 4 },
+      }}
+    >
+      <Container maxWidth="lg">
+        <Stack spacing={2.2}>
+          <Paper sx={{ ...glassCardSx, p: { xs: 2.2, md: 2.8 } }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5, gap: 1, flexWrap: "wrap" }}>
+              <Typography
+                variant="h3"
+                component="h1"
+                sx={{
+                  fontWeight: 800,
+                  fontSize: { xs: "1.9rem", md: "2.3rem" },
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
               >
-                重新生成
+                控制台
+              </Typography>
+              <Button startIcon={<LogoutIcon />} onClick={logout} variant="outlined" color="error" sx={{ borderRadius: 999 }}>
+                登出
               </Button>
             </Box>
-
-            {newApiKey ? (
-              <Alert severity="success" sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: "bold", mb: 1 }}>
-                  新的 API Key 已生成！请立即保存，刷新后将无法再次查看完整密钥。
-                </Typography>
-                <Paper sx={{ p: 2, bgcolor: "success.light", color: "success.contrastText" }}>
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <Typography
-                      sx={{
-                        fontFamily: "monospace",
-                        flexGrow: 1,
-                        wordBreak: "break-all",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      {newApiKey}
-                    </Typography>
-                    <IconButton onClick={() => handleCopy(newApiKey, "新 API Key")} size="small" color="inherit">
-                      <CopyIcon />
-                    </IconButton>
-                  </Box>
-                </Paper>
-              </Alert>
-            ) : (
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  当前 API Key（部分隐藏）
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Typography sx={{ fontFamily: "monospace", flexGrow: 1, fontSize: "0.875rem" }}>
-                    {formatApiKey(user.apiKey)}
-                  </Typography>
-                  <IconButton onClick={() => handleCopy(user.apiKey, "API Key")}>
-                    <CopyIcon />
-                  </IconButton>
-                </Box>
-              </Paper>
-            )}
-
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>提示：</strong>
-                请妥善保管您的 API Key，不要泄露给他人。如果您怀疑密钥已泄露，请立即重新生成。
-              </Typography>
-            </Alert>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* 使用说明卡片 */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            如何使用 API Key
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            您可以在需要认证的 API 请求中使用此 API Key。以下是一个示例：
-          </Typography>
-          <Paper
-            sx={{
-              p: 2,
-              bgcolor: theme.palette.mode === "dark" ? "grey.900" : "grey.100",
-              border: 1,
-              borderColor: "divider",
-            }}
-          >
-            <Typography
-              component="pre"
-              sx={{
-                fontFamily: "monospace",
-                fontSize: "0.875rem",
-                margin: 0,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-all",
-                color: theme.palette.mode === "dark" ? "grey.300" : "text.primary",
-              }}
-            >
-              {`curl -H "Authorization: Bearer ${user.apiKey}" \\
-  ${window.location.origin}/api/your-endpoint`}
-            </Typography>
           </Paper>
-        </CardContent>
-      </Card>
 
-      {/* 重新生成确认对话框 */}
+          <Card sx={glassCardSx}>
+            <CardContent>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                <Avatar src={user.avatarUrl || undefined} alt={user.username} sx={{ width: 80, height: 80, mr: 3 }}>
+                  {user.username.charAt(0).toUpperCase()}
+                </Avatar>
+                <Box>
+                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                    {user.username}
+                  </Typography>
+                  {user.email && (
+                    <Typography variant="body2" color="text.secondary">
+                      {user.email}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" color="text.secondary">
+                    注册时间: {new Date(user.createdAt).toLocaleString("zh-CN")}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ mt: 3 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, gap: 1, flexWrap: "wrap" }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    API 密钥
+                  </Typography>
+                  <Button
+                    startIcon={<RefreshIcon />}
+                    onClick={() => setRegenerateDialogOpen(true)}
+                    variant="outlined"
+                    size="small"
+                    sx={{ borderRadius: 999 }}
+                  >
+                    重新生成
+                  </Button>
+                </Box>
+
+                {newApiKey ? (
+                  <Alert severity="success" sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: "bold", mb: 1 }}>
+                      新的 API Key 已生成！请立即保存，刷新后将无法再次查看完整密钥。
+                    </Typography>
+                    <Paper sx={{ p: 2, bgcolor: "success.light", color: "success.contrastText", borderRadius: 2 }}>
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Typography
+                          sx={{
+                            fontFamily: "monospace",
+                            flexGrow: 1,
+                            wordBreak: "break-all",
+                            fontSize: "0.875rem",
+                          }}
+                        >
+                          {newApiKey}
+                        </Typography>
+                        <IconButton onClick={() => handleCopy(newApiKey, "新 API Key")} size="small" color="inherit">
+                          <CopyIcon />
+                        </IconButton>
+                      </Box>
+                    </Paper>
+                  </Alert>
+                ) : (
+                  <Paper sx={{ p: 2, borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      当前 API Key（部分隐藏）
+                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <Typography sx={{ fontFamily: "monospace", flexGrow: 1, fontSize: "0.875rem" }}>
+                        {formatApiKey(user.apiKey)}
+                      </Typography>
+                      <IconButton onClick={() => handleCopy(user.apiKey, "API Key")}>
+                        <CopyIcon />
+                      </IconButton>
+                    </Box>
+                  </Paper>
+                )}
+
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>提示：</strong>
+                    请妥善保管您的 API Key，不要泄露给他人。如果您怀疑密钥已泄露，请立即重新生成。
+                  </Typography>
+                </Alert>
+              </Box>
+            </CardContent>
+          </Card>
+
+          <Card sx={glassCardSx}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 700 }}>
+                如何使用 API Key
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                您可以在需要认证的 API 请求中使用此 API Key。以下是一个示例：
+              </Typography>
+              <Paper
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: theme.palette.mode === "dark" ? "grey.900" : "grey.100",
+                  border: 1,
+                  borderColor: "divider",
+                }}
+              >
+                <Typography
+                  component="pre"
+                  sx={{
+                    fontFamily: "monospace",
+                    fontSize: "0.875rem",
+                    margin: 0,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-all",
+                    color: theme.palette.mode === "dark" ? "grey.300" : "text.primary",
+                  }}
+                >
+                  {`curl -H "Authorization: Bearer ${user.apiKey}" \\
+  ${window.location.origin}/api/your-endpoint`}
+                </Typography>
+              </Paper>
+            </CardContent>
+          </Card>
+        </Stack>
+      </Container>
+
       <Dialog open={regenerateDialogOpen} onClose={() => !isRegenerating && setRegenerateDialogOpen(false)}>
         <DialogTitle>确认重新生成 API Key？</DialogTitle>
         <DialogContent>
@@ -281,11 +330,12 @@ export function DashboardPage() {
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
+          icon={snackbar.severity === "success" ? <CheckIcon /> : undefined}
           sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Container>
+    </Box>
   );
 }

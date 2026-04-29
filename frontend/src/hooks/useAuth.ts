@@ -9,6 +9,8 @@ interface User {
   email: string | null;
   avatarUrl: string | null;
   apiKey: string;
+  role: "user" | "admin";
+  status: "active" | "banned";
   createdAt: string;
 }
 

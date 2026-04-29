@@ -16,6 +16,8 @@ export const UserInfoSchema = z.object({
   email: z.string().nullable(),
   avatarUrl: z.string().nullable(),
   apiKey: z.string(),
+  role: z.enum(["user", "admin"]),
+  status: z.enum(["active", "banned"]),
   createdAt: z.string(),
 });
 

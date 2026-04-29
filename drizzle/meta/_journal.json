@@ -15,6 +15,20 @@
       "when": 1761895727393,
       "tag": "0001_black_retro_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1777452900000,
+      "tag": "0002_sparkling_blog_mvp",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1777456500000,
+      "tag": "0003_drop_features",
+      "breakpoints": true
     }
   ]
 }

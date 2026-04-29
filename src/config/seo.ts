@@ -38,42 +38,44 @@ export interface SEOConfig {
  */
 export const seoConfig: SEOConfig = {
   // 🌟 基础网站信息（必须修改）
-  siteName: "NekroEdge",
-  siteUrl: "https://edge.nekro.ai",
-  title: "NekroEdge - 现代化全栈应用模板",
-  description:
-    "基于 Cloudflare 技术栈的生产级全栈应用模板，使用 Hono + React + D1 技术栈，提供开箱即用的开发体验和端到端类型安全。支持服务器端渲染、自动API文档生成。",
+  siteName: "运阳的小窝",
+  siteUrl: "https://blog.lyuy.top/",
+  title: "运阳的小窝 - 人生苦短,我用python",
+  description: "运阳的个人博客，记录全栈开发、部署与 AI 实践。",
   keywords: [
-    "全栈开发",
-    "Cloudflare",
-    "Hono",
-    "React",
-    "TypeScript",
-    "无服务器",
-    "边缘计算",
-    "D1数据库",
-    "SSR",
-    "开发模板",
+    "运阳",
+    "yunyang",
+    "yang208115"
   ],
-  author: "NekroEdge Team",
+  author: "运阳",
   language: "zh-CN",
 
   // 🎨 社交媒体和品牌
-  ogImage: "/og-image.png",
+  ogImage: "",
   themeColor: "#8A2BE2",
 
   // 📄 页面级配置
   pages: {
     "/": {
-      title: "NekroEdge - 现代化全栈应用模板 | Cloudflare + Hono + React",
-      changefreq: "weekly",
+      title: "运阳的小窝 - 人生苦短,我用python",
+      description: "运阳的个人博客，记录全栈开发、部署与 AI 实践。",
+      keywords: ["运阳", "个人博客", "全栈开发", "Cloudflare", "React", "Python", "Agent"],
+      changefreq: "daily",
       priority: 1.0,
     },
-    "/features": {
-      title: "功能演示 - NekroEdge 全栈模板",
-      description: "体验 NekroEdge 模板的核心功能：端到端类型安全、服务器端渲染、自动API文档生成等现代化开发特性。",
-      changefreq: "monthly",
-      priority: 0.8,
+    "/blog": {
+      title: "文章列表 - 运阳的小窝",
+      description: "浏览运阳的小窝全部博客文章。",
+      keywords: ["博客", "文章", "技术分享"],
+      changefreq: "daily",
+      priority: 0.9,
+    },
+    "/dashboard": {
+      title: "用户控制台 - 运阳的小窝",
+      description: "查看账号信息与 API Key。",
+      keywords: ["控制台", "用户中心", "账号"],
+      changefreq: "weekly",
+      priority: 0.6,
     },
   },
 };

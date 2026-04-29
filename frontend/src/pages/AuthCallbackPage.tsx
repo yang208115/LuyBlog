@@ -1,4 +1,5 @@
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, Card, CardContent, CircularProgress, Stack, Typography, useTheme } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ import { z } from "zod";
 import { safeLocalStorage } from "../utils/storage";
 
 export function AuthCallbackPage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -60,15 +62,35 @@ export function AuthCallbackPage() {
   return (
     <Box
       sx={{
+        minHeight: "calc(100vh - 64px)",
+        background: theme.pageBackground,
         display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
         alignItems: "center",
-        height: "100vh",
+        justifyContent: "center",
+        px: 2,
       }}
     >
-      <CircularProgress />
-      <Typography sx={{ mt: 2 }}>正在验证您的身份，请稍候...</Typography>
+      <Card
+        sx={{
+          width: "100%",
+          maxWidth: 420,
+          borderRadius: 3,
+          backgroundColor: theme.glass.background,
+          backdropFilter: "blur(14px)",
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: `0 10px 30px ${alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.25 : 0.08)}`,
+        }}
+      >
+        <CardContent sx={{ py: 4 }}>
+          <Stack spacing={1.6} alignItems="center" textAlign="center">
+            <CircularProgress />
+            <Typography sx={{ fontWeight: 600 }}>正在验证您的身份，请稍候...</Typography>
+            <Typography variant="body2" color="text.secondary">
+              验证完成后将自动跳转到控制台。
+            </Typography>
+          </Stack>
+        </CardContent>
+      </Card>
     </Box>
   );
 }

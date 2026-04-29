@@ -374,6 +374,8 @@ auth
               email: user.email,
               avatarUrl: user.avatarUrl,
               apiKey: user.apiKey,
+              role: user.role,
+              status: user.status,
               createdAt: user.createdAt.toISOString(),
             },
             sessionToken,
@@ -434,6 +436,8 @@ protectedRoutes
       email: user.email,
       avatarUrl: user.avatarUrl,
       apiKey: user.apiKey,
+      role: user.role,
+      status: user.status,
       createdAt: user.createdAt.toISOString(),
     });
 

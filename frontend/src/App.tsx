@@ -12,13 +12,9 @@ import {
   MenuItem,
   IconButton,
   CircularProgress,
+  Stack,
 } from "@mui/material";
-import {
-  AccountCircle as AccountIcon,
-  Dashboard as DashboardIcon,
-  ExitToApp as LogoutIcon,
-  GitHub as GitHubIcon,
-} from "@mui/icons-material";
+import { Dashboard as DashboardIcon, ExitToApp as LogoutIcon, GitHub as GitHubIcon } from "@mui/icons-material";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { Footer } from "./components/Footer";
@@ -59,14 +55,14 @@ function App() {
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar disableGutters>
+          <Toolbar disableGutters sx={{ gap: 1.5 }}>
             <Box
               component={RouterLink}
               to="/"
               sx={{
                 display: "flex",
                 alignItems: "center",
-                mr: 2,
+                minWidth: 0,
                 textDecoration: "none",
                 color: "inherit",
               }}
@@ -86,80 +82,127 @@ function App() {
               </Typography>
             </Box>
 
-            <Box sx={{ flexGrow: 1 }} />
-
-            {/* 导航链接 */}
-            <Button
-              component={RouterLink}
-              to="/features"
-              sx={{
-                my: 2,
-                color: "inherit",
-                display: "block",
-                fontWeight: location.pathname === "/features" ? "bold" : "normal",
-              }}
-            >
-              API 示例
-            </Button>
-
-            {isAuthenticated && (
-              <Button
-                component={RouterLink}
-                to="/dashboard"
-                sx={{
-                  my: 2,
-                  color: "inherit",
-                  display: "block",
-                  fontWeight: location.pathname === "/dashboard" ? "bold" : "normal",
-                }}
-              >
-                控制台
-              </Button>
-            )}
-
-            <ToggleThemeButton />
-
-            {/* 用户认证区域 */}
-            {isLoading ? (
-              <CircularProgress size={20} sx={{ ml: 2 }} />
-            ) : isAuthenticated ? (
-              <>
-                <IconButton
-                  size="large"
-                  aria-label="用户菜单"
-                  aria-controls="user-menu"
-                  aria-haspopup="true"
-                  onClick={handleMenuOpen}
-                  color="inherit"
-                  sx={{ ml: 1 }}
+            <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
+              <Stack direction="row" spacing={0.5} sx={{ display: { xs: "none", md: "flex" } }}>
+                <Button
+                  component={RouterLink}
+                  to="/blog"
+                  sx={{
+                    color: "inherit",
+                    borderRadius: 999,
+                    px: 2,
+                    fontWeight: location.pathname.startsWith("/blog") ? 700 : 500,
+                    backgroundColor: location.pathname.startsWith("/blog") ? "action.selected" : "transparent",
+                  }}
                 >
-                  <Avatar src={user?.avatarUrl || undefined} alt={user?.username} sx={{ width: 32, height: 32 }}>
-                    {user?.username?.charAt(0).toUpperCase()}
-                  </Avatar>
-                </IconButton>
-                <Menu
-                  id="user-menu"
-                  anchorEl={anchorEl}
-                  open={Boolean(anchorEl)}
-                  onClose={handleMenuClose}
-                  transformOrigin={{ horizontal: "right", vertical: "top" }}
-                  anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+                  文章
+                </Button>
+
+                <Button
+                  component={RouterLink}
+                  to="/friends"
+                  sx={{
+                    color: "inherit",
+                    borderRadius: 999,
+                    px: 2,
+                    fontWeight: location.pathname.startsWith("/friends") ? 700 : 500,
+                    backgroundColor: location.pathname.startsWith("/friends") ? "action.selected" : "transparent",
+                  }}
                 >
-                  <MenuItem onClick={handleMenuClose} component={RouterLink} to="/dashboard">
-                    <DashboardIcon sx={{ mr: 1 }} />
-                    控制台
-                  </MenuItem>
-                  <MenuItem onClick={handleLogout}>
-                    <LogoutIcon sx={{ mr: 1 }} />
-                    登出
-                  </MenuItem>
-                </Menu>
-              </>
-            ) : (
-              <Button onClick={login} startIcon={<GitHubIcon />} variant="outlined" sx={{ ml: 2 }}>
-                GitHub 登录
-              </Button>
-            )}
+                  友链
+                </Button>
+
+                {isAuthenticated && (
+                  <Button
+                    component={RouterLink}
+                    to="/dashboard"
+                    sx={{
+                      color: "inherit",
+                      borderRadius: 999,
+                      px: 2,
+                      fontWeight: location.pathname === "/dashboard" ? 700 : 500,
+                      backgroundColor: location.pathname === "/dashboard" ? "action.selected" : "transparent",
+                    }}
+                  >
+                    我的
+                  </Button>
+                )}
+
+                <Button
+                  component={RouterLink}
+                  to="/about"
+                  sx={{
+                    color: "inherit",
+                    borderRadius: 999,
+                    px: 2,
+                    fontWeight: location.pathname.startsWith("/about") ? 700 : 500,
+                    backgroundColor: location.pathname.startsWith("/about") ? "action.selected" : "transparent",
+                  }}
+                >
+                  关于
+                </Button>
+
+                {isAuthenticated && user?.role === "admin" && (
+                  <Button
+                    component={RouterLink}
+                    to="/admin"
+                    sx={{
+                      color: "inherit",
+                      borderRadius: 999,
+                      px: 2,
+                      fontWeight: location.pathname.startsWith("/admin") ? 700 : 500,
+                      backgroundColor: location.pathname.startsWith("/admin") ? "action.selected" : "transparent",
+                    }}
+                  >
+                    后台
+                  </Button>
+                )}
+              </Stack>
+            </Box>
+
+            <Stack direction="row" spacing={0.8} alignItems="center">
+              <ToggleThemeButton />
+
+              {isLoading ? (
+                <CircularProgress size={20} sx={{ ml: 0.5 }} />
+              ) : isAuthenticated ? (
+                <>
+                  <IconButton
+                    size="large"
+                    aria-label="用户菜单"
+                    aria-controls="user-menu"
+                    aria-haspopup="true"
+                    onClick={handleMenuOpen}
+                    color="inherit"
+                  >
+                    <Avatar src={user?.avatarUrl || undefined} alt={user?.username} sx={{ width: 32, height: 32 }}>
+                      {user?.username?.charAt(0).toUpperCase()}
+                    </Avatar>
+                  </IconButton>
+                  <Menu
+                    id="user-menu"
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl)}
+                    onClose={handleMenuClose}
+                    transformOrigin={{ horizontal: "right", vertical: "top" }}
+                    anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+                  >
+                    <MenuItem onClick={handleMenuClose} component={RouterLink} to="/dashboard">
+                      <DashboardIcon sx={{ mr: 1 }} />
+                      控制台
+                    </MenuItem>
+                    <MenuItem onClick={handleLogout}>
+                      <LogoutIcon sx={{ mr: 1 }} />
+                      登出
+                    </MenuItem>
+                  </Menu>
+                </>
+              ) : (
+                <Button onClick={login} startIcon={<GitHubIcon />} variant="outlined" sx={{ borderRadius: 999 }}>
+                  GitHub 登录
+                </Button>
+              )}
+            </Stack>
           </Toolbar>
         </Container>
       </AppBar>

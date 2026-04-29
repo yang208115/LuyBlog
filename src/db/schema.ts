@@ -1,22 +1,7 @@
-import { sqliteTable, text, integer, unique, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 import { createId } from "@paralleldrive/cuid2";
 import { sql } from "drizzle-orm";
 
-export const features = sqliteTable(
-  "features",
-  {
-    id: integer("id").primaryKey(),
-    key: text("key").notNull(),
-    name: text("name").notNull(),
-    description: text("description").notNull(),
-    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
-  },
-  (table) => ({
-    keyIdx: unique("features_key_idx").on(table.key),
-  }),
-);
-
-// 用户表
 export const users = sqliteTable(
   "users",
   {
@@ -31,6 +16,8 @@ export const users = sqliteTable(
       .notNull()
       .unique()
       .$defaultFn(() => `ak-${createId()}`),
+    role: text("role", { enum: ["user", "admin"] }).notNull().default("user"),
+    status: text("status", { enum: ["active", "banned"] }).notNull().default("active"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(strftime('%s', 'now'))`),
@@ -41,7 +28,6 @@ export const users = sqliteTable(
   (table) => [index("users_github_id_idx").on(table.githubId), index("users_api_key_idx").on(table.apiKey)],
 );
 
-// 用户会话表
 export const userSessions = sqliteTable(
   "user_sessions",
   {
@@ -60,5 +46,62 @@ export const userSessions = sqliteTable(
   (table) => [
     index("user_sessions_session_token_idx").on(table.sessionToken),
     index("user_sessions_user_id_idx").on(table.userId),
+  ],
+);
+
+export const posts = sqliteTable(
+  "posts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    slug: text("slug").notNull().unique(),
+    summary: text("summary"),
+    contentMd: text("content_md").notNull(),
+    status: text("status", { enum: ["draft", "published"] }).notNull().default("draft"),
+    publishedAt: integer("published_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(strftime('%s', 'now'))`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(strftime('%s', 'now'))`),
+  },
+  (table) => [
+    index("posts_author_id_idx").on(table.authorId),
+    index("posts_status_published_at_idx").on(table.status, table.publishedAt),
+    index("posts_slug_idx").on(table.slug),
+  ],
+);
+
+export const comments = sqliteTable(
+  "comments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    postId: text("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    status: text("status", { enum: ["visible", "hidden"] }).notNull().default("visible"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(strftime('%s', 'now'))`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(strftime('%s', 'now'))`),
+  },
+  (table) => [
+    index("comments_post_id_created_at_idx").on(table.postId, table.createdAt),
+    index("comments_user_id_idx").on(table.userId),
+    index("comments_status_idx").on(table.status),
   ],
 );

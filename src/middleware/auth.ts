@@ -38,6 +38,10 @@ export const authMiddleware = createMiddleware<{
     return c.json({ success: false, message: "用户不存在" }, 401);
   }
 
+  if (user.status === "banned") {
+    return c.json({ success: false, message: "当前账户已被禁用" }, 403);
+  }
+
   c.set("user", user);
   await next();
 });

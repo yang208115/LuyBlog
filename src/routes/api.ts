@@ -2,8 +2,11 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import * as drizzleSchema from "../db/schema";
 import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 
-import features from "./feature";
 import auth from "./auth";
+import post from "./post";
+import comment from "./comment";
+import admin from "./admin";
+import ai from "./ai";
 import { Bindings } from "../types";
 
 type Variables = {
@@ -18,8 +21,11 @@ const api = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>()
     await next();
   })
   // Register API routes using chaining
-  .route("/features", features)
-  .route("/auth", auth);
+  .route("/auth", auth)
+  .route("/posts", post)
+  .route("/comments", comment)
+  .route("/admin", admin)
+  .route("/ai", ai);
 
 export type ApiRoutes = typeof api;
 
