@@ -58,6 +58,7 @@ export function generateHtmlTemplate(options: {
     
     <!-- Additional SEO -->
     <link rel="canonical" href="${url}">
+    <link rel="alternate" type="application/rss+xml" title="${seoConfig.siteName} RSS" href="${seoConfig.siteUrl}/rss.xml">
     <meta name="theme-color" content="${seoConfig.themeColor}">
     <meta name="application-name" content="${seoConfig.siteName}">
     <meta name="apple-mobile-web-app-title" content="${seoConfig.siteName}">

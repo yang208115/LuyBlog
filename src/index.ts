@@ -9,12 +9,15 @@
 
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { swaggerUI } from "@hono/swagger-ui";
+import type { Context } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { etag } from "hono/etag";
+import { drizzle } from "drizzle-orm/d1";
 
 import api from "./routes/api";
+import * as drizzleSchema from "./db/schema";
 import { Bindings } from "./types";
 
 const app = new OpenAPIHono<{ Bindings: Bindings }>();
@@ -60,12 +63,25 @@ app.get("/robots.txt", async (c) => {
 
 // Serve sitemap.xml (dynamically generated)
 app.get("/sitemap.xml", async (c) => {
-  const { generateSitemapXml } = await import("./utils/htmlTemplate");
-  return c.text(generateSitemapXml(), 200, {
+  const { generateDynamicSitemapXml } = await import("./utils/feed");
+  const db = drizzle(c.env.DB, { schema: drizzleSchema });
+  return c.text(await generateDynamicSitemapXml(db), 200, {
     "Content-Type": "application/xml",
     "Cache-Control": "public, max-age=86400", // Cache for 24 hours
   });
 });
+
+const rssHandler = async (c: Context<{ Bindings: Bindings }>) => {
+  const { generateRssXml } = await import("./utils/feed");
+  const db = drizzle(c.env.DB, { schema: drizzleSchema });
+  return c.text(await generateRssXml(db), 200, {
+    "Content-Type": "application/rss+xml; charset=utf-8",
+    "Cache-Control": "public, max-age=3600", // Cache for 1 hour
+  });
+};
+
+app.get("/rss.xml", rssHandler);
+app.get("/feed.xml", rssHandler);
 
 // Serve frontend assets
 app.get("*", async (c) => {

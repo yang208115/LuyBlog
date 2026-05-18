@@ -7,6 +7,10 @@ import post from "./post";
 import comment from "./comment";
 import admin from "./admin";
 import ai from "./ai";
+import content from "./content";
+import utility from "./utility";
+import music from "./music";
+import siteConfig from "./siteConfig";
 import { Bindings } from "../types";
 
 type Variables = {
@@ -24,6 +28,10 @@ const api = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>()
   .route("/auth", auth)
   .route("/posts", post)
   .route("/comments", comment)
+  .route("/music", music)
+  .route("/", siteConfig)
+  .route("/", content)
+  .route("/", utility)
   .route("/admin", admin)
   .route("/ai", ai);
 

@@ -39,7 +39,7 @@ export interface SEOConfig {
 export const seoConfig: SEOConfig = {
   // 🌟 基础网站信息（必须修改）
   siteName: "运阳的小窝",
-  siteUrl: "https://blog.lyuy.top/",
+  siteUrl: "https://blog.lyuy.top",
   title: "运阳的小窝 - 人生苦短,我用python",
   description: "运阳的个人博客，记录全栈开发、部署与 AI 实践。",
   keywords: [
@@ -64,18 +64,11 @@ export const seoConfig: SEOConfig = {
       priority: 1.0,
     },
     "/blog": {
-      title: "文章列表 - 运阳的小窝",
-      description: "浏览运阳的小窝全部博客文章。",
-      keywords: ["博客", "文章", "技术分享"],
+      title: "文章归档 - 运阳的小窝",
+      description: "按月份浏览运阳的小窝全部博客文章，并通过标签筛查内容。",
+      keywords: ["博客", "文章归档", "标签", "月份归档"],
       changefreq: "daily",
       priority: 0.9,
-    },
-    "/dashboard": {
-      title: "用户控制台 - 运阳的小窝",
-      description: "查看账号信息与 API Key。",
-      keywords: ["控制台", "用户中心", "账号"],
-      changefreq: "weekly",
-      priority: 0.6,
     },
   },
 };

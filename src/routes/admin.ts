@@ -2,17 +2,29 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { comments, posts, users } from "../db/schema";
+import { comments, friendLinks, moments, musicTracks, pages, posts, projects, users } from "../db/schema";
 import {
+  CreateFriendLinkSchema,
+  CreateMomentSchema,
+  CreateMusicTrackSchema,
+  CreatePageSchema,
   CreatePostSchema,
+  CreateProjectSchema,
   UpdateCommentStatusSchema,
+  UpdateFriendLinkSchema,
+  UpdateMomentSchema,
+  UpdateMusicTrackSchema,
+  UpdatePageSchema,
   UpdatePostSchema,
+  UpdateProjectSchema,
+  SiteConfigSchema,
   UpdateUserRoleSchema,
   UpdateUserStatusSchema,
 } from "../../common/validators/admin.schema";
 import { authMiddleware } from "../middleware/auth";
 import { adminMiddleware } from "../middleware/admin";
 import type { Bindings } from "../types";
+import { ensureSiteSettingsTable, getSiteConfig, SITE_CONFIG_KEY } from "./siteConfig";
 
 type Variables = {
   db: DrizzleD1Database<typeof schema>;
@@ -21,6 +33,130 @@ type Variables = {
 
 const app = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
 app.use("/*", authMiddleware, adminMiddleware);
+
+type NeteaseUrlResponse = {
+  code?: number;
+  data?: Array<{ url?: string | null; code?: number; expi?: number }>;
+};
+
+type NeteaseDetailResponse = {
+  code?: number;
+  songs?: Array<{
+    name?: string;
+    ar?: Array<{ name?: string }>;
+    al?: { name?: string; picUrl?: string };
+  }>;
+};
+
+type NeteaseLyricResponse = {
+  code?: number;
+  lrc?: {
+    lyric?: string;
+  };
+};
+
+async function resolveMusicUrl(neteaseId: string, level: string) {
+  const response = await fetch(
+    `https://music163.xuanmou.com.cn/song/url/v1?id=${encodeURIComponent(neteaseId)}&level=${encodeURIComponent(level)}`,
+    { headers: { accept: "application/json", "user-agent": "LuyBlog/1.0" } },
+  );
+  if (!response.ok) throw new Error(`音乐接口返回 ${response.status}`);
+  const data = (await response.json()) as NeteaseUrlResponse;
+  const first = data.data?.[0];
+  if (data.code !== 200 || first?.code !== 200 || !first.url) throw new Error("音乐接口未返回可播放 URL");
+  return {
+    url: first.url,
+    expiresAt: new Date(Date.now() + Math.max(60, Number(first.expi ?? 1200)) * 1000),
+  };
+}
+
+async function resolveMusicDetail(neteaseId: string) {
+  const response = await fetch(`https://music163.xuanmou.com.cn/song/detail?ids=${encodeURIComponent(neteaseId)}`, {
+    headers: { accept: "application/json", "user-agent": "LuyBlog/1.0" },
+  });
+  if (!response.ok) throw new Error(`歌曲详情接口返回 ${response.status}`);
+  const data = (await response.json()) as NeteaseDetailResponse;
+  const song = data.songs?.[0];
+  if (data.code !== 200 || !song) throw new Error("歌曲详情接口未返回歌曲信息");
+  return {
+    title: song.name ?? null,
+    artist: song.ar?.map((artist) => artist.name).filter(Boolean).join(" / ") || null,
+    album: song.al?.name ?? null,
+    cover: song.al?.picUrl ?? null,
+  };
+}
+
+async function resolveMusicLyric(neteaseId: string) {
+  const response = await fetch(`https://music163.xuanmou.com.cn/lyric?id=${encodeURIComponent(neteaseId)}`, {
+    headers: { accept: "application/json", "user-agent": "LuyBlog/1.0" },
+  });
+  if (!response.ok) throw new Error(`歌词接口返回 ${response.status}`);
+  const data = (await response.json()) as NeteaseLyricResponse;
+  if (data.code !== 200) throw new Error("歌词接口未返回成功状态");
+  return data.lrc?.lyric || null;
+}
+
+function jsonArray(values: string[]) {
+  return JSON.stringify(values);
+}
+
+function parseJsonArray(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function iso(date: Date | null): string | null {
+  return date ? date.toISOString() : null;
+}
+
+app.get("/stats", async (c) => {
+  const db = c.get("db");
+  const [postCount, momentCount, projectCount, pageCount, friendLinkCount, musicCount, commentCount, userCount] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(posts).get(),
+    db.select({ count: sql<number>`count(*)` }).from(moments).get(),
+    db.select({ count: sql<number>`count(*)` }).from(projects).get(),
+    db.select({ count: sql<number>`count(*)` }).from(pages).get(),
+    db.select({ count: sql<number>`count(*)` }).from(friendLinks).get(),
+    db.select({ count: sql<number>`count(*)` }).from(musicTracks).get(),
+    db.select({ count: sql<number>`count(*)` }).from(comments).get(),
+    db.select({ count: sql<number>`count(*)` }).from(users).get(),
+  ]);
+  return c.json({
+    posts: Number(postCount?.count ?? 0),
+    moments: Number(momentCount?.count ?? 0),
+    projects: Number(projectCount?.count ?? 0),
+    pages: Number(pageCount?.count ?? 0),
+    friendLinks: Number(friendLinkCount?.count ?? 0),
+    music: Number(musicCount?.count ?? 0),
+    comments: Number(commentCount?.count ?? 0),
+    users: Number(userCount?.count ?? 0),
+  });
+});
+
+app.get("/site-config", async (c) => {
+  const db = c.get("db");
+  return c.json(await getSiteConfig(db));
+});
+
+app.put("/site-config", async (c) => {
+  const db = c.get("db");
+  const parsed = SiteConfigSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "站点配置参数不合法" }, 400);
+
+  const value = JSON.stringify(parsed.data);
+  await ensureSiteSettingsTable(db);
+  await db
+    .insert(schema.siteSettings)
+    .values({ key: SITE_CONFIG_KEY, value, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: schema.siteSettings.key, set: { value, updatedAt: new Date() } });
+
+  return c.json(parsed.data);
+});
 
 app.get("/posts", async (c) => {
   const db = c.get("db");
@@ -36,7 +172,16 @@ app.get("/posts", async (c) => {
 
   const totalRow = await db.select({ count: sql<number>`count(*)` }).from(posts).get();
 
-  return c.json({ items: rows, pagination: { page, pageSize, total: Number(totalRow?.count ?? 0) } });
+  return c.json({
+    items: rows.map((row) => ({
+      ...row,
+      tags: parseJsonArray(row.tags),
+      publishedAt: iso(row.publishedAt),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+    pagination: { page, pageSize, total: Number(totalRow?.count ?? 0) },
+  });
 });
 
 app.post("/posts", async (c) => {
@@ -65,6 +210,9 @@ app.post("/posts", async (c) => {
       title: payload.title,
       slug: payload.slug,
       summary: payload.summary ?? null,
+      cover: payload.cover ?? null,
+      tags: jsonArray(payload.tags),
+      category: payload.category ?? null,
       contentMd: payload.contentMd,
       status: payload.status,
       publishedAt: payload.status === "published" ? now : null,
@@ -105,6 +253,9 @@ app.patch("/posts/:id", async (c) => {
       title: payload.title ?? existing.title,
       slug: payload.slug ?? existing.slug,
       summary: payload.summary !== undefined ? payload.summary : existing.summary,
+      cover: payload.cover !== undefined ? payload.cover : existing.cover,
+      tags: payload.tags !== undefined ? jsonArray(payload.tags) : existing.tags,
+      category: payload.category !== undefined ? payload.category : existing.category,
       contentMd: payload.contentMd ?? existing.contentMd,
       status: nextStatus,
       publishedAt: nextStatus === "published" ? existing.publishedAt ?? new Date() : null,
@@ -127,6 +278,243 @@ app.delete("/posts/:id", async (c) => {
 
   await db.delete(posts).where(eq(posts.id, id));
   return c.json({ success: true, message: "文章已删除" });
+});
+
+app.get("/moments", async (c) => {
+  const db = c.get("db");
+  const rows = await db.select().from(moments).orderBy(desc(moments.updatedAt));
+  return c.json({
+    items: rows.map((row) => ({
+      ...row,
+      images: parseJsonArray(row.images),
+      publishedAt: iso(row.publishedAt),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+  });
+});
+
+app.post("/moments", async (c) => {
+  const db = c.get("db");
+  const parsed = CreateMomentSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "瞬间参数不合法" }, 400);
+
+  const exists = await db.select({ id: moments.id }).from(moments).where(eq(moments.slug, parsed.data.slug)).get();
+  if (exists) return c.json({ code: 400, message: "slug 已存在" }, 400);
+
+  const now = new Date();
+  const [created] = await db
+    .insert(moments)
+    .values({
+      slug: parsed.data.slug,
+      contentMd: parsed.data.contentMd,
+      location: parsed.data.location ?? null,
+      images: jsonArray(parsed.data.images),
+      frontmatter: "{}",
+      status: parsed.data.status,
+      publishedAt: parsed.data.status === "published" ? now : null,
+      updatedAt: now,
+    })
+    .returning();
+  return c.json(created);
+});
+
+app.patch("/moments/:id", async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  const parsed = UpdateMomentSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "瞬间参数不合法" }, 400);
+
+  const existing = await db.select().from(moments).where(eq(moments.id, id)).get();
+  if (!existing) return c.json({ code: 404, message: "瞬间不存在" }, 404);
+  if (parsed.data.slug && parsed.data.slug !== existing.slug) {
+    const exists = await db.select({ id: moments.id }).from(moments).where(eq(moments.slug, parsed.data.slug)).get();
+    if (exists) return c.json({ code: 400, message: "slug 已存在" }, 400);
+  }
+
+  const nextStatus = parsed.data.status ?? existing.status;
+  const [updated] = await db
+    .update(moments)
+    .set({
+      slug: parsed.data.slug ?? existing.slug,
+      contentMd: parsed.data.contentMd ?? existing.contentMd,
+      location: parsed.data.location !== undefined ? parsed.data.location : existing.location,
+      images: parsed.data.images !== undefined ? jsonArray(parsed.data.images) : existing.images,
+      status: nextStatus,
+      publishedAt: nextStatus === "published" ? existing.publishedAt ?? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(moments.id, id))
+    .returning();
+  return c.json(updated);
+});
+
+app.delete("/moments/:id", async (c) => {
+  const db = c.get("db");
+  await db.delete(moments).where(eq(moments.id, c.req.param("id")));
+  return c.json({ success: true });
+});
+
+app.get("/projects", async (c) => {
+  const db = c.get("db");
+  const rows = await db.select().from(projects).orderBy(projects.sortOrder, desc(projects.updatedAt));
+  return c.json({
+    items: rows.map((row) => ({
+      ...row,
+      tags: parseJsonArray(row.tags),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+  });
+});
+
+app.post("/projects", async (c) => {
+  const db = c.get("db");
+  const parsed = CreateProjectSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "项目参数不合法" }, 400);
+  const [created] = await db
+    .insert(projects)
+    .values({
+      ...parsed.data,
+      description: parsed.data.description ?? null,
+      icon: parsed.data.icon ?? null,
+      githubUrl: parsed.data.githubUrl ?? null,
+      tags: jsonArray(parsed.data.tags),
+      updatedAt: new Date(),
+    })
+    .returning();
+  return c.json(created);
+});
+
+app.patch("/projects/:id", async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  const parsed = UpdateProjectSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "项目参数不合法" }, 400);
+  const existing = await db.select().from(projects).where(eq(projects.id, id)).get();
+  if (!existing) return c.json({ code: 404, message: "项目不存在" }, 404);
+  const [updated] = await db
+    .update(projects)
+    .set({
+      name: parsed.data.name ?? existing.name,
+      description: parsed.data.description !== undefined ? parsed.data.description : existing.description,
+      icon: parsed.data.icon !== undefined ? parsed.data.icon : existing.icon,
+      githubUrl: parsed.data.githubUrl !== undefined ? parsed.data.githubUrl : existing.githubUrl,
+      tags: parsed.data.tags !== undefined ? jsonArray(parsed.data.tags) : existing.tags,
+      sortOrder: parsed.data.sortOrder ?? existing.sortOrder,
+      status: parsed.data.status ?? existing.status,
+      updatedAt: new Date(),
+    })
+    .where(eq(projects.id, id))
+    .returning();
+  return c.json(updated);
+});
+
+app.delete("/projects/:id", async (c) => {
+  const db = c.get("db");
+  await db.delete(projects).where(eq(projects.id, c.req.param("id")));
+  return c.json({ success: true });
+});
+
+app.get("/pages", async (c) => {
+  const db = c.get("db");
+  const rows = await db.select().from(pages).orderBy(desc(pages.updatedAt));
+  return c.json({ items: rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() })) });
+});
+
+app.post("/pages", async (c) => {
+  const db = c.get("db");
+  const parsed = CreatePageSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "页面参数不合法" }, 400);
+  const exists = await db.select({ id: pages.id }).from(pages).where(eq(pages.slug, parsed.data.slug)).get();
+  if (exists) return c.json({ code: 400, message: "slug 已存在" }, 400);
+  const [created] = await db
+    .insert(pages)
+    .values({ ...parsed.data, frontmatter: "{}", updatedAt: new Date() })
+    .returning();
+  return c.json(created);
+});
+
+app.patch("/pages/:id", async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  const parsed = UpdatePageSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "页面参数不合法" }, 400);
+  const existing = await db.select().from(pages).where(eq(pages.id, id)).get();
+  if (!existing) return c.json({ code: 404, message: "页面不存在" }, 404);
+  if (parsed.data.slug && parsed.data.slug !== existing.slug) {
+    const exists = await db.select({ id: pages.id }).from(pages).where(eq(pages.slug, parsed.data.slug)).get();
+    if (exists) return c.json({ code: 400, message: "slug 已存在" }, 400);
+  }
+  const [updated] = await db
+    .update(pages)
+    .set({
+      slug: parsed.data.slug ?? existing.slug,
+      title: parsed.data.title ?? existing.title,
+      contentMd: parsed.data.contentMd ?? existing.contentMd,
+      status: parsed.data.status ?? existing.status,
+      updatedAt: new Date(),
+    })
+    .where(eq(pages.id, id))
+    .returning();
+  return c.json(updated);
+});
+
+app.delete("/pages/:id", async (c) => {
+  const db = c.get("db");
+  await db.delete(pages).where(eq(pages.id, c.req.param("id")));
+  return c.json({ success: true });
+});
+
+app.get("/friend-links", async (c) => {
+  const db = c.get("db");
+  const rows = await db.select().from(friendLinks).orderBy(friendLinks.sortOrder, desc(friendLinks.updatedAt));
+  return c.json({ items: rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() })) });
+});
+
+app.post("/friend-links", async (c) => {
+  const db = c.get("db");
+  const parsed = CreateFriendLinkSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "友链参数不合法" }, 400);
+  const [created] = await db
+    .insert(friendLinks)
+    .values({
+      ...parsed.data,
+      description: parsed.data.description ?? null,
+      avatarUrl: parsed.data.avatarUrl ?? null,
+      updatedAt: new Date(),
+    })
+    .returning();
+  return c.json(created);
+});
+
+app.patch("/friend-links/:id", async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  const parsed = UpdateFriendLinkSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "友链参数不合法" }, 400);
+  const existing = await db.select().from(friendLinks).where(eq(friendLinks.id, id)).get();
+  if (!existing) return c.json({ code: 404, message: "友链不存在" }, 404);
+  const [updated] = await db
+    .update(friendLinks)
+    .set({
+      name: parsed.data.name ?? existing.name,
+      description: parsed.data.description !== undefined ? parsed.data.description : existing.description,
+      url: parsed.data.url ?? existing.url,
+      avatarUrl: parsed.data.avatarUrl !== undefined ? parsed.data.avatarUrl : existing.avatarUrl,
+      sortOrder: parsed.data.sortOrder ?? existing.sortOrder,
+      status: parsed.data.status ?? existing.status,
+      updatedAt: new Date(),
+    })
+    .where(eq(friendLinks.id, id))
+    .returning();
+  return c.json(updated);
+});
+
+app.delete("/friend-links/:id", async (c) => {
+  const db = c.get("db");
+  await db.delete(friendLinks).where(eq(friendLinks.id, c.req.param("id")));
+  return c.json({ success: true });
 });
 
 app.get("/comments", async (c) => {
@@ -204,6 +592,161 @@ app.get("/users", async (c) => {
   const totalRow = await db.select({ count: sql<number>`count(*)` }).from(users).get();
 
   return c.json({ items: rows, pagination: { page, pageSize, total: Number(totalRow?.count ?? 0) } });
+});
+
+app.get("/music-tracks", async (c) => {
+  const db = c.get("db");
+  const rows = await db.select().from(musicTracks).orderBy(musicTracks.sortOrder, desc(musicTracks.updatedAt));
+  return c.json({
+    items: rows.map((row) => ({
+      ...row,
+      cachedAt: row.cachedAt?.toISOString() ?? null,
+      cacheExpiresAt: row.cacheExpiresAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+  });
+});
+
+app.post("/music-tracks", async (c) => {
+  const db = c.get("db");
+  const parsed = CreateMusicTrackSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "歌曲参数不合法" }, 400);
+
+  const exists = await db.select({ id: musicTracks.id }).from(musicTracks).where(eq(musicTracks.neteaseId, parsed.data.neteaseId)).get();
+  if (exists) return c.json({ code: 400, message: "歌曲 ID 已存在" }, 400);
+
+  let cachedUrl: string | null = null;
+  let cacheExpiresAt: Date | null = null;
+  let cachedAt: Date | null = null;
+  let detail: Awaited<ReturnType<typeof resolveMusicDetail>> | null = null;
+  let lyric: string | null = null;
+  try {
+    detail = await resolveMusicDetail(parsed.data.neteaseId);
+  } catch {
+    // 详情接口失败时仍允许保存手动填写的歌曲信息。
+  }
+  try {
+    lyric = await resolveMusicLyric(parsed.data.neteaseId);
+  } catch {
+    // 歌词接口失败时保留手动填写。
+  }
+  try {
+    const resolved = await resolveMusicUrl(parsed.data.neteaseId, parsed.data.level);
+    cachedUrl = resolved.url;
+    cacheExpiresAt = resolved.expiresAt;
+    cachedAt = new Date();
+  } catch {
+    // 保存配置，后续播放或手动刷新时再获取。
+  }
+
+  const [created] = await db
+    .insert(musicTracks)
+    .values({
+      ...parsed.data,
+      title: parsed.data.title || detail?.title || parsed.data.neteaseId,
+      artist: parsed.data.artist ?? detail?.artist ?? null,
+      album: parsed.data.album ?? detail?.album ?? null,
+      cover: parsed.data.cover ?? detail?.cover ?? null,
+      lyric: parsed.data.lyric ?? lyric,
+      cachedUrl,
+      cachedAt,
+      cacheExpiresAt,
+      updatedAt: new Date(),
+    })
+    .returning();
+  return c.json(created);
+});
+
+app.patch("/music-tracks/:id", async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  const parsed = UpdateMusicTrackSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "歌曲参数不合法" }, 400);
+
+  const existing = await db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
+  if (!existing) return c.json({ code: 404, message: "歌曲不存在" }, 404);
+
+  let detail: Awaited<ReturnType<typeof resolveMusicDetail>> | null = null;
+  let lyric: string | null = null;
+  const nextNeteaseId = parsed.data.neteaseId ?? existing.neteaseId;
+  if (parsed.data.neteaseId && parsed.data.neteaseId !== existing.neteaseId) {
+    try {
+      detail = await resolveMusicDetail(parsed.data.neteaseId);
+    } catch {
+      // 保留手动输入。
+    }
+    try {
+      lyric = await resolveMusicLyric(parsed.data.neteaseId);
+    } catch {
+      // 保留手动输入。
+    }
+  }
+
+  const [updated] = await db
+    .update(musicTracks)
+    .set({
+      ...parsed.data,
+      title: parsed.data.title ?? detail?.title ?? existing.title,
+      artist: parsed.data.artist !== undefined ? parsed.data.artist : detail?.artist ?? existing.artist,
+      album: parsed.data.album !== undefined ? parsed.data.album : detail?.album ?? existing.album,
+      cover: parsed.data.cover !== undefined ? parsed.data.cover : detail?.cover ?? existing.cover,
+      lyric: parsed.data.lyric !== undefined ? parsed.data.lyric : lyric ?? existing.lyric,
+      neteaseId: nextNeteaseId,
+      updatedAt: new Date(),
+    })
+    .where(eq(musicTracks.id, id))
+    .returning();
+  return c.json(updated);
+});
+
+app.post("/music-tracks/:id/refresh", async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  const existing = await db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
+  if (!existing) return c.json({ code: 404, message: "歌曲不存在" }, 404);
+
+  try {
+    let detail: Awaited<ReturnType<typeof resolveMusicDetail>> | null = null;
+    let lyric: string | null = null;
+    try {
+      detail = await resolveMusicDetail(existing.neteaseId);
+    } catch {
+      // 只刷新 URL 也可以。
+    }
+    try {
+      lyric = await resolveMusicLyric(existing.neteaseId);
+    } catch {
+      // 歌词刷新不能阻塞 URL 刷新。
+    }
+    const resolved = await resolveMusicUrl(existing.neteaseId, existing.level);
+    const [updated] = await db
+      .update(musicTracks)
+      .set({
+        title: detail?.title ?? existing.title,
+        artist: detail?.artist ?? existing.artist,
+        album: detail?.album ?? existing.album,
+        cover: detail?.cover ?? existing.cover,
+        lyric: lyric ?? existing.lyric,
+        cachedUrl: resolved.url,
+        cachedAt: new Date(),
+        cacheExpiresAt: resolved.expiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(musicTracks.id, id))
+      .returning();
+    return c.json(updated);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "刷新歌曲 URL 失败";
+    return c.json({ code: 502, message }, 502);
+  }
+});
+
+app.delete("/music-tracks/:id", async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  await db.delete(musicTracks).where(eq(musicTracks.id, id));
+  return c.json({ success: true });
 });
 
 app.patch("/users/:id/role", async (c) => {

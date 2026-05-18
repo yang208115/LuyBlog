@@ -13,20 +13,47 @@ import {
   IconButton,
   CircularProgress,
   Stack,
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemText,
 } from "@mui/material";
-import { Dashboard as DashboardIcon, ExitToApp as LogoutIcon, GitHub as GitHubIcon } from "@mui/icons-material";
+import {
+  AdminPanelSettingsRounded,
+  CloseRounded,
+  ExitToApp as LogoutIcon,
+  GitHub as GitHubIcon,
+  MenuRounded,
+} from "@mui/icons-material";
+import { alpha } from "@mui/material/styles";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Footer } from "./components/Footer";
-import { NekroEdgeLogo } from "./assets/logos";
+import { BackgroundEffects } from "./components/BackgroundEffects";
+import { FloatingPlayer } from "./components/FloatingPlayer";
 import { ToggleThemeButton } from "./components/ToggleThemeButton";
 import { useAuth } from "./hooks/useAuth";
+import { useSiteConfig } from "./context/SiteConfigProvider";
+
+const navItems = [
+  { label: "首页", to: "/", active: (path: string) => path === "/" },
+  { label: "归档", to: "/blog", active: (path: string) => path.startsWith("/blog") || path.startsWith("/posts") },
+  { label: "搜索", to: "/search", active: (path: string) => path.startsWith("/search") },
+  { label: "瞬间", to: "/moments", active: (path: string) => path.startsWith("/moments") },
+  { label: "项目", to: "/projects", active: (path: string) => path.startsWith("/projects") },
+  { label: "音乐", to: "/music", active: (path: string) => path.startsWith("/music") },
+  { label: "友链", to: "/friends", active: (path: string) => path.startsWith("/friends") },
+  { label: "关于", to: "/about", active: (path: string) => path.startsWith("/about") },
+];
 
 function App() {
   const location = useLocation();
   const theme = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const siteConfig = useSiteConfig();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -41,21 +68,50 @@ function App() {
     handleMenuClose();
   };
 
+  useEffect(() => {
+    document.title = siteConfig.title;
+    let favicon = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+    if (!favicon) {
+      favicon = document.createElement("link");
+      favicon.rel = "icon";
+      document.head.appendChild(favicon);
+    }
+    favicon.href = siteConfig.faviconUrl;
+  }, [siteConfig.faviconUrl, siteConfig.title]);
+
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh", position: "relative" }}>
       <CssBaseline />
+      {!isAdminRoute && <BackgroundEffects />}
       <AppBar
-        position="sticky"
+        position="fixed"
         elevation={0}
         sx={{
           color: theme.palette.text.primary,
           backgroundColor: theme.appBar.background,
-          backdropFilter: "blur(12px) saturate(180%)",
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          backdropFilter: "blur(22px) saturate(180%)",
+          WebkitBackdropFilter: "blur(22px) saturate(180%)",
+          borderBottom: `1px solid ${alpha(theme.palette.common.white, theme.palette.mode === "dark" ? 0.14 : 0.52)}`,
+          boxShadow: `0 14px 44px ${alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.24 : 0.08)}`,
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: theme.zIndex.appBar,
         }}
       >
         <Container maxWidth="xl">
           <Toolbar disableGutters sx={{ gap: 1.5 }}>
+            <IconButton
+              aria-label="打开导航"
+              onClick={() => setMobileOpen(true)}
+              sx={{
+                display: { xs: "inline-flex", md: "none" },
+                borderRadius: 2,
+                backgroundColor: alpha(theme.palette.background.paper, 0.42),
+              }}
+            >
+              <MenuRounded />
+            </IconButton>
             <Box
               component={RouterLink}
               to="/"
@@ -67,80 +123,53 @@ function App() {
                 color: "inherit",
               }}
             >
-              <NekroEdgeLogo height={32} />
-              <Typography
-                variant="h6"
-                noWrap
+                <Typography
+                  variant="h6"
+                  noWrap
                 sx={{
                   ml: 1.5,
                   display: { xs: "none", md: "flex" },
-                  fontFamily: "monospace",
-                  fontWeight: 700,
+                  fontWeight: 900,
+                  letterSpacing: 0,
                 }}
               >
-                NekroEdge
+                {siteConfig.navTitle}
+                {siteConfig.navSuffix}
+                {siteConfig.navAfter}
               </Typography>
             </Box>
 
             <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
-              <Stack direction="row" spacing={0.5} sx={{ display: { xs: "none", md: "flex" } }}>
-                <Button
-                  component={RouterLink}
-                  to="/blog"
-                  sx={{
-                    color: "inherit",
-                    borderRadius: 999,
-                    px: 2,
-                    fontWeight: location.pathname.startsWith("/blog") ? 700 : 500,
-                    backgroundColor: location.pathname.startsWith("/blog") ? "action.selected" : "transparent",
-                  }}
-                >
-                  文章
-                </Button>
-
-                <Button
-                  component={RouterLink}
-                  to="/friends"
-                  sx={{
-                    color: "inherit",
-                    borderRadius: 999,
-                    px: 2,
-                    fontWeight: location.pathname.startsWith("/friends") ? 700 : 500,
-                    backgroundColor: location.pathname.startsWith("/friends") ? "action.selected" : "transparent",
-                  }}
-                >
-                  友链
-                </Button>
-
-                {isAuthenticated && (
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  display: isAdminRoute ? "none" : { xs: "none", md: "flex" },
+                  p: 0.5,
+                  borderRadius: 999,
+                  backgroundColor: alpha(theme.palette.background.paper, theme.palette.mode === "dark" ? 0.2 : 0.36),
+                  border: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
+                }}
+              >
+                {navItems.map((item) => (
                   <Button
+                    key={item.to}
                     component={RouterLink}
-                    to="/dashboard"
+                    to={item.to}
                     sx={{
-                      color: "inherit",
                       borderRadius: 999,
-                      px: 2,
-                      fontWeight: location.pathname === "/dashboard" ? 700 : 500,
-                      backgroundColor: location.pathname === "/dashboard" ? "action.selected" : "transparent",
+                      px: 1.4,
+                      fontWeight: item.active(location.pathname) ? 700 : 500,
+                      backgroundColor: item.active(location.pathname)
+                        ? alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.24 : 0.12)
+                        : "transparent",
+                      color: item.active(location.pathname) ? "primary.main" : "text.primary",
+                      border: "1px solid transparent",
                     }}
                   >
-                    我的
+                    {item.label}
                   </Button>
-                )}
-
-                <Button
-                  component={RouterLink}
-                  to="/about"
-                  sx={{
-                    color: "inherit",
-                    borderRadius: 999,
-                    px: 2,
-                    fontWeight: location.pathname.startsWith("/about") ? 700 : 500,
-                    backgroundColor: location.pathname.startsWith("/about") ? "action.selected" : "transparent",
-                  }}
-                >
-                  关于
-                </Button>
+                ))}
 
                 {isAuthenticated && user?.role === "admin" && (
                   <Button
@@ -187,10 +216,12 @@ function App() {
                     transformOrigin={{ horizontal: "right", vertical: "top" }}
                     anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
                   >
-                    <MenuItem onClick={handleMenuClose} component={RouterLink} to="/dashboard">
-                      <DashboardIcon sx={{ mr: 1 }} />
-                      控制台
-                    </MenuItem>
+                    {user?.role === "admin" && (
+                      <MenuItem onClick={handleMenuClose} component={RouterLink} to="/admin">
+                        <AdminPanelSettingsRounded sx={{ mr: 1 }} />
+                        后台
+                      </MenuItem>
+                    )}
                     <MenuItem onClick={handleLogout}>
                       <LogoutIcon sx={{ mr: 1 }} />
                       登出
@@ -206,10 +237,73 @@ function App() {
           </Toolbar>
         </Container>
       </AppBar>
-      <Box component="main" sx={{ flexGrow: 1 }}>
+      <Drawer
+        anchor="left"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        PaperProps={{
+          sx: {
+            width: 284,
+            p: 2,
+            borderTopRightRadius: 18,
+            borderBottomRightRadius: 18,
+            backgroundColor: theme.glass.background,
+            backdropFilter: "blur(22px) saturate(180%)",
+          },
+        }}
+      >
+        <Stack spacing={2}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6" sx={{ fontWeight: 900 }}>
+              {siteConfig.navTitle}
+              {siteConfig.navSuffix}
+              {siteConfig.navAfter}
+            </Typography>
+            <IconButton aria-label="关闭导航" onClick={() => setMobileOpen(false)}>
+              <CloseRounded />
+            </IconButton>
+          </Stack>
+          <List sx={{ display: "grid", gap: 0.6 }}>
+            {navItems.map((item) => {
+              const active = item.active(location.pathname);
+              return (
+                <ListItemButton
+                  key={item.to}
+                  component={RouterLink}
+                  to={item.to}
+                  onClick={() => setMobileOpen(false)}
+                  sx={{
+                    borderRadius: 2,
+                    backgroundColor: active ? alpha(theme.palette.primary.main, 0.14) : "transparent",
+                    color: active ? "primary.main" : "text.primary",
+                  }}
+                >
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{ fontWeight: active ? 900 : 700 }}
+                  />
+                </ListItemButton>
+              );
+            })}
+            {isAuthenticated && user?.role === "admin" && (
+              <ListItemButton
+                component={RouterLink}
+                to="/admin"
+                onClick={() => setMobileOpen(false)}
+                sx={{ borderRadius: 2 }}
+              >
+                <ListItemText primary="后台" primaryTypographyProps={{ fontWeight: 700 }} />
+              </ListItemButton>
+            )}
+          </List>
+        </Stack>
+      </Drawer>
+      <Toolbar aria-hidden="true" sx={{ flexShrink: 0 }} />
+      <Box component="main" sx={{ flexGrow: 1, position: "relative", zIndex: 1, minWidth: 0 }}>
         <Outlet />
       </Box>
-      <Footer />
+      {!isAdminRoute && <FloatingPlayer />}
+      {!isAdminRoute && <Footer />}
     </Box>
   );
 }

@@ -1,13 +1,17 @@
 import { Route, Routes } from "react-router-dom";
 import App from "./App";
 import HomePage from "./pages/HomePage";
-import { DashboardPage } from "./pages/DashboardPage";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { BlogListPage } from "./pages/BlogListPage";
 import { BlogDetailPage } from "./pages/BlogDetailPage";
 import { AdminPage } from "./pages/AdminPage";
+import { AdminPostEditorPage } from "./pages/AdminPostEditorPage";
 import { AboutPage } from "./pages/AboutPage";
 import { FriendsPage } from "./pages/FriendsPage";
+import { MomentsPage } from "./pages/MomentsPage";
+import { ProjectsPage } from "./pages/ProjectsPage";
+import { MusicPage } from "./pages/MusicPage";
+import { SearchPage } from "./pages/SearchPage";
 
 /**
  * 应用路由配置
@@ -25,11 +29,16 @@ export const AppRoutes = () => (
     <Route path="/" element={<App />}>
       <Route index element={<HomePage />} />
       <Route path="blog" element={<BlogListPage />} />
+      <Route path="search" element={<SearchPage />} />
       <Route path="blog/:slug" element={<BlogDetailPage />} />
-      <Route path="dashboard" element={<DashboardPage />} />
+      <Route path="posts/:slug" element={<BlogDetailPage />} />
+      <Route path="moments" element={<MomentsPage />} />
+      <Route path="projects" element={<ProjectsPage />} />
+      <Route path="music" element={<MusicPage />} />
       <Route path="friends" element={<FriendsPage />} />
       <Route path="about" element={<AboutPage />} />
       <Route path="admin" element={<AdminPage />} />
+      <Route path="admin/posts/:id" element={<AdminPostEditorPage />} />
       <Route path="auth/callback" element={<AuthCallbackPage />} />
     </Route>
   </Routes>

@@ -1,10 +1,12 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { comments, users } from "../db/schema";
+import { comments, posts, users } from "../db/schema";
 import { authMiddleware } from "../middleware/auth";
+import { moderateCommentWithConfig } from "../services/ai";
 import type { Bindings } from "../types";
+import { getSiteConfig } from "./siteConfig";
 
 type Variables = {
   db: DrizzleD1Database<typeof schema>;
@@ -12,9 +14,127 @@ type Variables = {
 };
 
 const app = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
-app.use("/*", authMiddleware);
+const protectedRoutes = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
 
-app.delete("/:id", async (c) => {
+async function targetExists(db: DrizzleD1Database<typeof schema>, targetSlug: string) {
+  return db.select({ id: posts.id, slug: posts.slug }).from(posts).where(and(eq(posts.slug, targetSlug), eq(posts.status, "published"))).get();
+}
+
+app.get("/", async (c) => {
+  const db = c.get("db");
+  const targetType = c.req.query("targetType");
+  const targetSlug = c.req.query("targetSlug");
+  if (targetType !== "post") {
+    return c.json({ code: 400, message: "targetType 不合法" }, 400);
+  }
+  if (!targetSlug) {
+    return c.json({ code: 400, message: "targetSlug 不能为空" }, 400);
+  }
+
+  const rows = await db
+    .select({
+      id: comments.id,
+      postId: comments.postId,
+      targetType: comments.targetType,
+      targetSlug: comments.targetSlug,
+      parentId: comments.parentId,
+      userId: comments.userId,
+      content: comments.content,
+      status: comments.status,
+      createdAt: comments.createdAt,
+      updatedAt: comments.updatedAt,
+      username: users.username,
+      avatarUrl: users.avatarUrl,
+    })
+    .from(comments)
+    .innerJoin(users, eq(comments.userId, users.id))
+    .where(and(eq(comments.targetType, targetType), eq(comments.targetSlug, targetSlug), eq(comments.status, "visible")))
+    .orderBy(desc(comments.createdAt));
+
+  return c.json(
+    rows.map((row) => ({
+      id: row.id,
+      postId: row.postId,
+      targetType: row.targetType,
+      targetSlug: row.targetSlug,
+      parentId: row.parentId,
+      userId: row.userId,
+      content: row.content,
+      status: row.status,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      user: {
+        id: row.userId,
+        username: row.username,
+        avatarUrl: row.avatarUrl,
+      },
+    })),
+  );
+});
+
+protectedRoutes.use("/*", authMiddleware);
+
+protectedRoutes.post("/", async (c) => {
+  const db = c.get("db");
+  const currentUser = c.get("user");
+  if (!currentUser) return c.json({ code: 401, message: "用户未认证" }, 401);
+
+  const body = (await c.req.json()) as {
+    targetType?: string;
+    targetSlug?: string;
+    parentId?: string;
+    content?: string;
+  };
+  if (body.targetType !== "post") {
+    return c.json({ code: 400, message: "targetType 不合法" }, 400);
+  }
+  const targetSlug = body.targetSlug?.trim();
+  const content = body.content?.trim();
+  if (!targetSlug || !content || content.length > 1000) {
+    return c.json({ code: 400, message: "评论内容不合法" }, 400);
+  }
+
+  const target = await targetExists(db, targetSlug);
+  if (!target) {
+    return c.json({ code: 404, message: "评论目标不存在" }, 404);
+  }
+
+  const config = await getSiteConfig(db);
+  const moderation = await moderateCommentWithConfig(config.aiConfig, content);
+  const [created] = await db
+    .insert(comments)
+    .values({
+      postId: target.id,
+      targetType: body.targetType,
+      targetSlug,
+      parentId: body.parentId,
+      userId: currentUser.id,
+      content,
+      status: moderation.flagged ? "hidden" : "visible",
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return c.json({
+    id: created.id,
+    postId: created.postId,
+    targetType: created.targetType,
+    targetSlug: created.targetSlug,
+    parentId: created.parentId,
+    userId: created.userId,
+    content: created.content,
+    status: created.status,
+    createdAt: created.createdAt.toISOString(),
+    updatedAt: created.updatedAt.toISOString(),
+    user: {
+      id: currentUser.id,
+      username: currentUser.username,
+      avatarUrl: currentUser.avatarUrl,
+    },
+  });
+});
+
+protectedRoutes.delete("/:id", async (c) => {
   const db = c.get("db");
   const currentUser = c.get("user");
   if (!currentUser) {
@@ -37,4 +157,6 @@ app.delete("/:id", async (c) => {
   return c.json({ success: true, message: "评论已删除" });
 });
 
-export default app;
+export default new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>()
+  .route("/", app)
+  .route("/", protectedRoutes);

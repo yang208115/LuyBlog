@@ -3,10 +3,13 @@ type ChatMessage = {
   content: string;
 };
 
-type BindingsLike = {
-  OPENAI_API_KEY?: string;
-  AI_BASE_URL?: string;
-  AI_MODEL?: string;
+export type AiConfig = {
+  apiKey?: string | null;
+  baseUrl?: string | null;
+  model?: string | null;
+  systemPrompt?: string | null;
+  maxTokens?: number | null;
+  temperature?: number | null;
 };
 
 type ChatResult = {
@@ -16,16 +19,21 @@ type ChatResult = {
 const defaultBaseUrl = "https://api.openai.com/v1";
 const defaultModel = "gpt-4.1-mini";
 
-async function runChat(env: BindingsLike, messages: ChatMessage[], temperature = 0.3): Promise<ChatResult> {
-  const apiKey = env.OPENAI_API_KEY;
+export function chatCompletionsUrl(baseUrl: string) {
+  const trimmed = baseUrl.replace(/\/+$/, "");
+  return trimmed.endsWith("/chat/completions") ? trimmed : `${trimmed}/chat/completions`;
+}
+
+async function runChatWithConfig(config: AiConfig, messages: ChatMessage[], temperature = 0.3): Promise<ChatResult> {
+  const apiKey = config.apiKey?.trim();
   if (!apiKey) {
-    throw new Error("AI 服务未配置 OPENAI_API_KEY");
+    throw new Error("AI 服务未配置 API Key");
   }
 
-  const baseUrl = env.AI_BASE_URL || defaultBaseUrl;
-  const model = env.AI_MODEL || defaultModel;
+  const baseUrl = config.baseUrl?.trim() || defaultBaseUrl;
+  const model = config.model?.trim() || defaultModel;
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
+  const response = await fetch(chatCompletionsUrl(baseUrl), {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -38,9 +46,14 @@ async function runChat(env: BindingsLike, messages: ChatMessage[], temperature =
     }),
   });
 
+  const contentType = response.headers.get("content-type") ?? "";
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`AI 服务调用失败: ${response.status} ${errorText}`);
+    throw new Error(`AI 服务调用失败: ${response.status} ${errorText.slice(0, 500)}`);
+  }
+  if (!contentType.includes("application/json")) {
+    const bodyText = await response.text();
+    throw new Error(`AI 服务返回非 JSON 响应: ${contentType || "unknown"} ${bodyText.slice(0, 200)}`);
   }
 
   const data = (await response.json()) as {
@@ -55,9 +68,9 @@ async function runChat(env: BindingsLike, messages: ChatMessage[], temperature =
   return { text };
 }
 
-export async function generateSummary(env: BindingsLike, title: string, contentMd: string): Promise<string> {
-  const result = await runChat(
-    env,
+export async function generateSummaryWithConfig(config: AiConfig, title: string, contentMd: string): Promise<string> {
+  const result = await runChatWithConfig(
+    config,
     [
       {
         role: "system",
@@ -74,9 +87,9 @@ export async function generateSummary(env: BindingsLike, title: string, contentM
   return result.text;
 }
 
-export async function suggestTitles(env: BindingsLike, contentMd: string, count: number): Promise<string[]> {
-  const result = await runChat(
-    env,
+export async function suggestTitlesWithConfig(config: AiConfig, contentMd: string, count: number): Promise<string[]> {
+  const result = await runChatWithConfig(
+    config,
     [
       {
         role: "system",
@@ -106,34 +119,34 @@ export async function suggestTitles(env: BindingsLike, contentMd: string, count:
   }
 }
 
-export async function moderateComment(env: BindingsLike, content: string): Promise<{ flagged: boolean; reason: string | null }> {
-  if (!env.OPENAI_API_KEY) {
+export async function moderateCommentWithConfig(config: AiConfig, content: string): Promise<{ flagged: boolean; reason: string | null }> {
+  if (!config.apiKey?.trim()) {
     return { flagged: false, reason: null };
   }
 
-  const result = await runChat(
-    env,
-    [
-      {
-        role: "system",
-        content:
-          "你是评论审核助手。判断内容是否包含辱骂、人身攻击、仇恨、明显广告引流。返回 JSON：{\"flagged\":boolean,\"reason\":string|null}。",
-      },
-      {
-        role: "user",
-        content,
-      },
-    ],
-    0,
-  );
-
   try {
+    const result = await runChatWithConfig(
+      config,
+      [
+        {
+          role: "system",
+          content:
+            "你是评论审核助手。判断内容是否包含辱骂、人身攻击、仇恨、明显广告引流。返回 JSON：{\"flagged\":boolean,\"reason\":string|null}。",
+        },
+        {
+          role: "user",
+          content,
+        },
+      ],
+      0,
+    );
     const parsed = JSON.parse(result.text) as { flagged?: boolean; reason?: string | null };
     return {
       flagged: Boolean(parsed.flagged),
       reason: parsed.reason ?? null,
     };
-  } catch {
+  } catch (error) {
+    console.warn("评论 AI 审核失败，已降级放行", error);
     return { flagged: false, reason: null };
   }
 }

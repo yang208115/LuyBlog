@@ -3,6 +3,8 @@ import ReactDOMServer from "react-dom/server";
 import { StaticRouter } from "react-router-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppThemeProvider } from "./context/ThemeContextProvider";
+import { MusicProvider } from "./context/MusicProvider";
+import { SiteConfigProvider } from "./context/SiteConfigProvider";
 import { AppRoutes } from "./routes";
 
 /**
@@ -24,11 +26,15 @@ export function render(path: string) {
   const html = ReactDOMServer.renderToString(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
-        <AppThemeProvider>
-          <StaticRouter location={path}>
-            <AppRoutes />
-          </StaticRouter>
-        </AppThemeProvider>
+        <SiteConfigProvider>
+          <AppThemeProvider>
+            <MusicProvider>
+              <StaticRouter location={path}>
+                <AppRoutes />
+              </StaticRouter>
+            </MusicProvider>
+          </AppThemeProvider>
+        </SiteConfigProvider>
       </QueryClientProvider>
     </React.StrictMode>,
   );

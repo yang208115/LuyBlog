@@ -37,6 +37,7 @@
     "@vitejs/plugin-react-swc": "^3.10.2",
     "concurrently": "^8.2.2",
     "drizzle-kit": "^0.31.4",
+    "gray-matter": "^4.0.3",
     "prettier": "^3.3.2",
     "rimraf": "^5.0.7",
     "tsx": "^4.20.3",

@@ -5,7 +5,8 @@ import * as schema from "../db/schema";
 import { comments, posts, users } from "../db/schema";
 import { CreateCommentSchema } from "../../common/validators/blog.schema";
 import { authMiddleware } from "../middleware/auth";
-import { moderateComment } from "../services/ai";
+import { moderateCommentWithConfig } from "../services/ai";
+import { getSiteConfig } from "./siteConfig";
 import type { Bindings } from "../types";
 
 type Variables = {
@@ -32,7 +33,7 @@ app.get("/", async (c) => {
     .offset((page - 1) * pageSize);
 
   const totalRow = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: sql<number>`count(*)`, totalViews: sql<number>`coalesce(sum(${posts.viewCount}), 0)` })
     .from(posts)
     .where(eq(posts.status, "published"))
     .get();
@@ -44,6 +45,12 @@ app.get("/", async (c) => {
       title: post.title,
       slug: post.slug,
       summary: post.summary,
+      cover: post.cover,
+      tags: post.tags,
+      category: post.category,
+      readingTime: post.readingTime,
+      viewCount: post.viewCount,
+      frontmatter: post.frontmatter,
       contentMd: post.contentMd,
       status: post.status,
       publishedAt: post.publishedAt ? post.publishedAt.toISOString() : null,
@@ -54,6 +61,7 @@ app.get("/", async (c) => {
       page,
       pageSize,
       total: Number(totalRow?.count ?? 0),
+      totalViews: Number(totalRow?.totalViews ?? 0),
     },
   });
 });
@@ -72,12 +80,24 @@ app.get("/:slug", async (c) => {
     return c.json({ code: 404, message: "文章不存在" }, 404);
   }
 
+  const [viewedPost] = await db
+    .update(posts)
+    .set({ viewCount: sql`${posts.viewCount} + 1` })
+    .where(eq(posts.id, post.id))
+    .returning({ viewCount: posts.viewCount });
+
   return c.json({
     id: post.id,
     authorId: post.authorId,
     title: post.title,
     slug: post.slug,
     summary: post.summary,
+    cover: post.cover,
+    tags: post.tags,
+    category: post.category,
+    readingTime: post.readingTime,
+    viewCount: viewedPost?.viewCount ?? post.viewCount + 1,
+    frontmatter: post.frontmatter,
     contentMd: post.contentMd,
     status: post.status,
     publishedAt: post.publishedAt ? post.publishedAt.toISOString() : null,
@@ -90,7 +110,7 @@ app.get("/:id/comments", async (c) => {
   const db = c.get("db");
   const id = c.req.param("id");
 
-  const post = await db.select({ id: posts.id }).from(posts).where(eq(posts.id, id)).get();
+  const post = await db.select({ id: posts.id, slug: posts.slug }).from(posts).where(eq(posts.id, id)).get();
   if (!post) {
     return c.json({ code: 404, message: "文章不存在" }, 404);
   }
@@ -99,6 +119,9 @@ app.get("/:id/comments", async (c) => {
     .select({
       id: comments.id,
       postId: comments.postId,
+      targetType: comments.targetType,
+      targetSlug: comments.targetSlug,
+      parentId: comments.parentId,
       userId: comments.userId,
       content: comments.content,
       status: comments.status,
@@ -116,6 +139,9 @@ app.get("/:id/comments", async (c) => {
     rows.map((row) => ({
       id: row.id,
       postId: row.postId,
+      targetType: row.targetType,
+      targetSlug: row.targetSlug,
+      parentId: row.parentId,
       userId: row.userId,
       content: row.content,
       status: row.status,
@@ -143,19 +169,26 @@ protectedRoutes.post("/:id/comments", async (c) => {
     return c.json({ code: 400, message: "评论内容不合法" }, 400);
   }
 
-  const post = await db.select({ id: posts.id }).from(posts).where(and(eq(posts.id, id), eq(posts.status, "published"))).get();
+  const post = await db
+    .select({ id: posts.id, slug: posts.slug })
+    .from(posts)
+    .where(and(eq(posts.id, id), eq(posts.status, "published")))
+    .get();
 
   if (!post) {
     return c.json({ code: 404, message: "文章不存在或未发布" }, 404);
   }
 
-  const moderation = await moderateComment(c.env, parsed.data.content);
+  const config = await getSiteConfig(db);
+  const moderation = await moderateCommentWithConfig(config.aiConfig, parsed.data.content);
   const status = moderation.flagged ? "hidden" : "visible";
 
   const [created] = await db
     .insert(comments)
     .values({
       postId: id,
+      targetType: "post",
+      targetSlug: post.slug,
       userId: currentUser.id,
       content: parsed.data.content,
       status,
@@ -166,6 +199,9 @@ protectedRoutes.post("/:id/comments", async (c) => {
   return c.json({
     id: created.id,
     postId: created.postId,
+    targetType: created.targetType,
+    targetSlug: created.targetSlug,
+    parentId: created.parentId,
     userId: created.userId,
     content: created.content,
     status: created.status,

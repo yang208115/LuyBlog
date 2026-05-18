@@ -6,7 +6,5 @@ export type Bindings = {
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;
   APP_BASE_URL: string;
-  OPENAI_API_KEY?: string;
-  AI_BASE_URL?: string;
-  AI_MODEL?: string;
+  QWEATHER_KEY?: string;
 };
