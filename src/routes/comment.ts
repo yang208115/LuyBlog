@@ -7,6 +7,7 @@ import { authMiddleware } from "../middleware/auth";
 import { moderateCommentWithConfig } from "../services/ai";
 import type { Bindings } from "../types";
 import { getSiteConfig } from "./siteConfig";
+import { z } from "@hono/zod-openapi";
 
 type Variables = {
   db: DrizzleD1Database<typeof schema>;
@@ -15,6 +16,12 @@ type Variables = {
 
 const app = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
 const protectedRoutes = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
+const CreateTargetCommentSchema = z.object({
+  targetType: z.literal("post"),
+  targetSlug: z.string().trim().min(1).max(120),
+  parentId: z.string().trim().min(1).max(128).optional(),
+  content: z.string().trim().min(1).max(1000),
+});
 
 async function targetExists(db: DrizzleD1Database<typeof schema>, targetSlug: string) {
   return db.select({ id: posts.id, slug: posts.slug }).from(posts).where(and(eq(posts.slug, targetSlug), eq(posts.status, "published"))).get();
@@ -79,20 +86,12 @@ protectedRoutes.post("/", async (c) => {
   const currentUser = c.get("user");
   if (!currentUser) return c.json({ code: 401, message: "用户未认证" }, 401);
 
-  const body = (await c.req.json()) as {
-    targetType?: string;
-    targetSlug?: string;
-    parentId?: string;
-    content?: string;
-  };
-  if (body.targetType !== "post") {
-    return c.json({ code: 400, message: "targetType 不合法" }, 400);
-  }
-  const targetSlug = body.targetSlug?.trim();
-  const content = body.content?.trim();
-  if (!targetSlug || !content || content.length > 1000) {
+  const json = await c.req.json().catch(() => null);
+  const parsed = CreateTargetCommentSchema.safeParse(json);
+  if (!parsed.success) {
     return c.json({ code: 400, message: "评论内容不合法" }, 400);
   }
+  const { targetType, targetSlug, parentId, content } = parsed.data;
 
   const target = await targetExists(db, targetSlug);
   if (!target) {
@@ -105,9 +104,9 @@ protectedRoutes.post("/", async (c) => {
     .insert(comments)
     .values({
       postId: target.id,
-      targetType: body.targetType,
+      targetType,
       targetSlug,
-      parentId: body.parentId,
+      parentId,
       userId: currentUser.id,
       content,
       status: moderation.flagged ? "hidden" : "visible",

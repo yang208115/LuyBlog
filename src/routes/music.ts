@@ -4,12 +4,17 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { musicTracks } from "../db/schema";
 import type { Bindings } from "../types";
+import { authMiddleware } from "../middleware/auth";
+import { adminMiddleware } from "../middleware/admin";
 
 type Variables = {
   db: DrizzleD1Database<typeof schema>;
+  user?: typeof schema.users.$inferSelect;
 };
 
 const app = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
+const protectedRoutes = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
+protectedRoutes.use("/*", authMiddleware, adminMiddleware);
 
 type NeteaseUrlResponse = {
   code?: number;
@@ -170,7 +175,7 @@ app.get("/tracks", async (c) => {
   return c.json(resolved.map(toDto));
 });
 
-app.post("/tracks/:id/refresh", async (c) => {
+protectedRoutes.post("/tracks/:id/refresh", async (c) => {
   const db = c.get("db");
   const id = c.req.param("id");
   const row = await db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
@@ -186,3 +191,4 @@ app.post("/tracks/:id/refresh", async (c) => {
 });
 
 export default app;
+export { protectedRoutes as protectedMusicRoutes };

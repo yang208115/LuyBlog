@@ -4,16 +4,21 @@ import * as schema from "../db/schema";
 import type { Bindings } from "../types";
 import { chatCompletionsUrl } from "../services/ai";
 import { getSiteConfig } from "./siteConfig";
+import { authMiddleware } from "../middleware/auth";
+import { adminMiddleware } from "../middleware/admin";
 
 type Variables = {
   db: DrizzleD1Database<typeof schema>;
+  user: typeof schema.users.$inferSelect;
 };
 
 const app = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
+const protectedRoutes = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
+protectedRoutes.use("/*", authMiddleware, adminMiddleware);
 
 app.get("/test", (c) => c.text("喵！我能通！"));
 
-app.post("/chat", async (c) => {
+protectedRoutes.post("/chat", async (c) => {
   const config = await getSiteConfig(c.get("db"));
   const aiConfig = config.aiConfig;
   const key = aiConfig.apiKey.trim();
@@ -23,7 +28,7 @@ app.post("/chat", async (c) => {
 
   const body = (await c.req.json().catch(() => ({}))) as { message?: string; messages?: Array<{ role: string; content: string }> };
   const message = body.message ?? body.messages?.at(-1)?.content;
-  if (!message?.trim()) {
+  if (!message?.trim() || message.length > 4000) {
     return c.json({ code: 400, message: "message 不能为空" }, 400);
   }
 
@@ -38,7 +43,7 @@ app.post("/chat", async (c) => {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify({
         model: aiModel,
-        messages: body.messages ?? [
+        messages: [
           { role: "system", content: aiPrompt },
           { role: "user", content: message },
         ],
@@ -80,3 +85,4 @@ app.get("/weather", async (c) => {
 });
 
 export default app;
+export { protectedRoutes as protectedUtilityRoutes };

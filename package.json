@@ -6,8 +6,8 @@
     "dev": "concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
     "dev:backend": "wrangler dev",
     "dev:frontend": "vite --config frontend/vite.config.mts",
-    "build:client": "vite build --config frontend/vite.config.mts",
-    "build:server": "vite build --ssr src/entry-server.tsx --outDir ../dist/server --config frontend/vite.config.mts",
+    "build:client": "vite build --emptyOutDir --config frontend/vite.config.mts",
+    "build:server": "vite build --emptyOutDir --ssr src/entry-server.tsx --outDir ../dist/server --config frontend/vite.config.mts",
     "build": "pnpm generate:html && pnpm build:client && pnpm build:server",
     "build:prod": "pnpm db:migrate:prod && pnpm generate:html && pnpm build:client && pnpm build:server",
     "generate:html": "tsx scripts/generateHtml.ts",
@@ -23,8 +23,8 @@
     "db:seed": "wrangler d1 execute DB --local --file=./drizzle/seed.sql",
     "db:seed:prod": "wrangler d1 execute DB --remote --file=./drizzle/seed.sql",
     "typecheck": "tsc --noEmit && tsc -p frontend/tsconfig.json --noEmit",
-    "lint": "tsx",
-    "format": "eslint . --fix"
+    "lint": "tsc --noEmit && tsc -p frontend/tsconfig.json --noEmit",
+    "format": "prettier . --write"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.7.5",

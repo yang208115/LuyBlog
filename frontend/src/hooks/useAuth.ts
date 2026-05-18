@@ -32,6 +32,7 @@ const authApi = {
     if (!data.success) {
       throw new Error(data.message);
     }
+    safeLocalStorage.setItem("github_oauth_state", data.data.state);
     return data.data;
   },
 

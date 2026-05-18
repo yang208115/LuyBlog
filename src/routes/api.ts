@@ -8,8 +8,8 @@ import comment from "./comment";
 import admin from "./admin";
 import ai from "./ai";
 import content from "./content";
-import utility from "./utility";
-import music from "./music";
+import utility, { protectedUtilityRoutes } from "./utility";
+import music, { protectedMusicRoutes } from "./music";
 import siteConfig from "./siteConfig";
 import { Bindings } from "../types";
 
@@ -29,9 +29,11 @@ const api = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>()
   .route("/posts", post)
   .route("/comments", comment)
   .route("/music", music)
+  .route("/music", protectedMusicRoutes)
   .route("/", siteConfig)
   .route("/", content)
   .route("/", utility)
+  .route("/", protectedUtilityRoutes)
   .route("/admin", admin)
   .route("/ai", ai);
 

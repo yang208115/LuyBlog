@@ -21,6 +21,23 @@ type Variables = {
   user?: typeof users.$inferSelect;
 };
 
+const OAUTH_STATE_COOKIE = "github_oauth_state";
+
+function cookieOptions(isProduction: boolean, maxAgeSeconds = 600) {
+  return `HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAgeSeconds}${isProduction ? "; Secure" : ""}`;
+}
+
+function getCookieValue(cookieHeader: string | undefined, name: string) {
+  if (!cookieHeader) return null;
+  const prefix = `${name}=`;
+  const part = cookieHeader.split(";").map((value) => value.trim()).find((value) => value.startsWith(prefix));
+  return part ? decodeURIComponent(part.slice(prefix.length)) : null;
+}
+
+function clearCookieOptions(isProduction: boolean) {
+  return `HttpOnly; Path=/; SameSite=Lax; Max-Age=0${isProduction ? "; Secure" : ""}`;
+}
+
 // GitHub OAuth 登录 URL
 const loginRoute = createRoute({
   method: "get",
@@ -216,19 +233,38 @@ auth
     githubAuthUrl.searchParams.set("scope", "user:email");
     githubAuthUrl.searchParams.set("state", state);
 
-    return c.json({
-      success: true,
-      message: "GitHub OAuth URL 生成成功",
-      data: {
-        authUrl: githubAuthUrl.toString(),
-        state,
+    const response = c.json(
+      {
+        success: true,
+        message: "GitHub OAuth URL 生成成功",
+        data: {
+          authUrl: githubAuthUrl.toString(),
+          state,
+        },
       },
-    });
+      200,
+    );
+    response.headers.append("Set-Cookie", `${OAUTH_STATE_COOKIE}=${encodeURIComponent(state)}; ${cookieOptions(c.env.NODE_ENV === "production")}`);
+    return response;
   })
   .openapi(callbackRoute, async (c) => {
     const code = c.req.query("code")!;
     const state = c.req.query("state");
     const db = c.get("db");
+    const expectedState = getCookieValue(c.req.header("Cookie"), OAUTH_STATE_COOKIE);
+    const isProduction = c.env.NODE_ENV === "production";
+
+    if (!state || !expectedState || state !== expectedState) {
+      const response = c.json(
+        {
+          success: false,
+          message: "OAuth state 校验失败",
+        },
+        400,
+      );
+      response.headers.append("Set-Cookie", `${OAUTH_STATE_COOKIE}=; ${clearCookieOptions(isProduction)}`);
+      return response;
+    }
 
     try {
       // 1. 使用 code 交换 access token
@@ -263,10 +299,8 @@ auth
         error?: string;
         error_description?: string;
       };
-      console.log("GitHub token response:", tokenData);
-
       if (!tokenData.access_token) {
-        console.error("GitHub token data invalid:", tokenData);
+        console.error("GitHub token data invalid:", tokenData.error ?? "missing access_token");
         return c.json(
           {
             success: false,
@@ -361,9 +395,9 @@ auth
         expiresAt,
       });
 
-      console.log(`[Auth Callback] Session created for user ${user.id} with token ${sessionToken}`);
+      console.log(`[Auth Callback] Session created for user ${user.id}`);
 
-      return c.json(
+      const response = c.json(
         {
           success: true,
           message: "登录成功",
@@ -383,6 +417,8 @@ auth
         },
         200,
       );
+      response.headers.append("Set-Cookie", `${OAUTH_STATE_COOKIE}=; ${clearCookieOptions(isProduction)}`);
+      return response;
     } catch (error) {
       console.error("GitHub OAuth 登录失败:", error);
       return c.json(
@@ -403,7 +439,6 @@ protectedRoutes
     }
 
     const sessionToken = authHeader.substring(7);
-    console.log(`[Auth Me] Checking token: ${sessionToken}`);
     const db = c.get("db");
 
     const session = await db
@@ -411,8 +446,6 @@ protectedRoutes
       .from(userSessions)
       .where(and(eq(userSessions.sessionToken, sessionToken), gt(userSessions.expiresAt, new Date())))
       .get();
-
-    console.log(`[Auth Me] Session found in DB:`, session);
 
     if (!session) {
       return c.json({ code: 401, message: "认证令牌无效或已过期" }, 401);

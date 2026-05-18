@@ -752,10 +752,15 @@ app.delete("/music-tracks/:id", async (c) => {
 app.patch("/users/:id/role", async (c) => {
   const db = c.get("db");
   const id = c.req.param("id");
+  const currentUser = c.get("user");
   const parsed = UpdateUserRoleSchema.safeParse(await c.req.json());
 
   if (!parsed.success) {
     return c.json({ code: 400, message: "角色参数不合法" }, 400);
+  }
+
+  if (currentUser?.id === id && parsed.data.role !== "admin") {
+    return c.json({ code: 400, message: "不能移除自己的管理员权限" }, 400);
   }
 
   const [updated] = await db
@@ -774,10 +779,15 @@ app.patch("/users/:id/role", async (c) => {
 app.patch("/users/:id/status", async (c) => {
   const db = c.get("db");
   const id = c.req.param("id");
+  const currentUser = c.get("user");
   const parsed = UpdateUserStatusSchema.safeParse(await c.req.json());
 
   if (!parsed.success) {
     return c.json({ code: 400, message: "状态参数不合法" }, 400);
+  }
+
+  if (currentUser?.id === id && parsed.data.status !== "active") {
+    return c.json({ code: 400, message: "不能禁用自己的账户" }, 400);
   }
 
   const [updated] = await db

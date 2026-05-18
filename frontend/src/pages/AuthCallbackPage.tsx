@@ -28,8 +28,11 @@ export function AuthCallbackPage() {
       const params = new URLSearchParams(location.search);
       const code = params.get("code");
       const state = params.get("state");
+      const expectedState = safeLocalStorage.getItem("github_oauth_state");
 
-      if (!code || !state) {
+      safeLocalStorage.removeItem("github_oauth_state");
+
+      if (!code || !state || !expectedState || state !== expectedState) {
         navigate("/");
         return;
       }

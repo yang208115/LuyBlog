@@ -27,7 +27,11 @@ app.use("*", etag(), secureHeaders(), logger());
 app.use(
   "/api/*",
   cors({
-    origin: "*", // You may want to configure this more strictly for production
+    origin: (origin, c) => {
+      if (c.env.NODE_ENV !== "production") return origin || "*";
+      const allowedOrigin = c.env.APP_BASE_URL;
+      return origin === allowedOrigin ? origin : "";
+    },
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   }),
 );
@@ -154,19 +158,12 @@ app.get("*", async (c) => {
     return c.html(template);
   } catch (e) {
     console.error("SSR failed:", e);
-    // Fallback to a simple error page if SSR fails.
-    let detailedError = "An unknown error occurred.";
-    if (e instanceof Error) {
-      detailedError = `Error: ${e.message}\n\nStack Trace:\n${e.stack}\n`;
-      try {
-        const serializedError = JSON.stringify(e, Object.getOwnPropertyNames(e), 2);
-        detailedError += `\nFull Error Object:\n${serializedError}`;
-      } catch (jsonError) {
-        detailedError += "\nCould not serialize the full error object.";
-      }
-    } else {
-      detailedError = `An non-error was thrown: ${String(e)}`;
-    }
+    const detailedError =
+      c.env.NODE_ENV === "production"
+        ? "The page could not be rendered. Please try again later."
+        : e instanceof Error
+          ? `Error: ${e.message}\n\nStack Trace:\n${e.stack}\n`
+          : `A non-error was thrown: ${String(e)}`;
 
     return c.html(
       `<!DOCTYPE html><html><head><title>Render Error</title><style>body{font-family:sans-serif;background:#111;color:#eee;}pre{background:#222;padding:1em;border-radius:8px;white-space:pre-wrap;word-wrap:break-word;}</style></head><body><h1>Server-side rendering failed.</h1><p>Please check the server logs for more details.</p><hr><pre>${detailedError}</pre></body></html>`,
