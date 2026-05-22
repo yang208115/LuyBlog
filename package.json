@@ -21,7 +21,8 @@
     "db:studio": "drizzle-kit studio",
     "db:check": "drizzle-kit check",
     "db:seed": "wrangler d1 execute DB --local --file=./drizzle/seed.sql",
-    "db:seed:prod": "wrangler d1 execute DB --remote --file=./drizzle/seed.sql",
+    "db:seed:prod": "wrangler d1 execute DB --env production --remote --file=./drizzle/seed.sql",
+    "db:import:halo:prod": "wrangler d1 execute DB --env production --remote --file=./drizzle/halo-import.sql",
     "typecheck": "tsc --noEmit && tsc -p frontend/tsconfig.json --noEmit",
     "lint": "tsc --noEmit && tsc -p frontend/tsconfig.json --noEmit",
     "format": "prettier . --write"
@@ -69,6 +70,7 @@
     "react-i18next": "^15.5.3",
     "react-markdown": "^10.1.0",
     "react-router-dom": "6.23.1",
+    "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "zod": "^3.22.4"
   }

@@ -16,11 +16,6 @@
 			"database_name": "nekro-edge-db-local",
 			"database_id": "local",
 			"migrations_dir": "drizzle"
-		},
-		{
-			"binding": "luyblog_prod",
-			"database_name": "luyblog-prod",
-			"database_id": "556a28d9-10d5-48b4-b711-015085b2ee0a"
 		}
 	],
 	"vars": {
