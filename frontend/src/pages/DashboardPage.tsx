@@ -7,7 +7,6 @@ import {
   IconButton,
   Button,
   Alert,
-  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -31,6 +30,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { interactiveGlassCardSx, SectionPanel } from "../components/Glass";
 import { PublicPageLayout } from "../components/Layout";
+import { ModernLoader } from "../components/Loading";
 
 export function DashboardPage() {
   const theme = useTheme();
@@ -104,7 +104,7 @@ export function DashboardPage() {
     return (
       <PublicPageLayout maxWidth="lg">
         <SectionPanel sx={{ display: "flex", justifyContent: "center" }}>
-          <CircularProgress />
+          <ModernLoader size={40} />
         </SectionPanel>
       </PublicPageLayout>
     );
@@ -289,7 +289,7 @@ export function DashboardPage() {
             取消
           </Button>
           <Button onClick={handleRegenerateKey} color="error" variant="contained" disabled={isRegenerating}>
-            {isRegenerating ? <CircularProgress size={20} /> : "确认重新生成"}
+            {isRegenerating ? <ModernLoader size={20} /> : "确认重新生成"}
           </Button>
         </DialogActions>
       </Dialog>

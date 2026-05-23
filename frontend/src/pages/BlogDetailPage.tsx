@@ -1,4 +1,4 @@
-import { Alert, Box, Card, CardContent, Chip, CircularProgress, Stack, Typography } from "@mui/material";
+import { Alert, Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 import { VisibilityRounded } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
@@ -7,6 +7,7 @@ import { glassCardSx, SectionPanel } from "../components/Glass";
 import { PublicPageLayout } from "../components/Layout";
 import { MarkdownView } from "../components/MarkdownView";
 import { contentApi, normalizeTags } from "../services/content";
+import { ModernLoader } from "../components/Loading";
 
 export function BlogDetailPage() {
   const { slug = "" } = useParams();
@@ -20,7 +21,7 @@ export function BlogDetailPage() {
     return (
       <PublicPageLayout maxWidth="md">
         <SectionPanel sx={{ display: "flex", justifyContent: "center" }}>
-          <CircularProgress />
+          <ModernLoader size={40} />
         </SectionPanel>
       </PublicPageLayout>
     );

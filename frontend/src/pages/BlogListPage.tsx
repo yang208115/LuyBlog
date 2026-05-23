@@ -3,7 +3,6 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   Divider,
   InputAdornment,
   Stack,
@@ -20,6 +19,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { interactiveGlassCardSx, SectionPanel } from "../components/Glass";
 import { PublicPageLayout } from "../components/Layout";
 import { contentApi, normalizeTags, type PostItem } from "../services/content";
+import { ModernLoader } from "../components/Loading";
 
 type PostListResponse = {
   items: PostItem[];
@@ -98,7 +98,7 @@ export function BlogListPage() {
     return (
       <PublicPageLayout maxWidth="md">
         <SectionPanel sx={{ display: "flex", justifyContent: "center" }}>
-          <CircularProgress />
+          <ModernLoader size={40} />
         </SectionPanel>
       </PublicPageLayout>
     );

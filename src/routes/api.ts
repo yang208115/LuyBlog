@@ -11,6 +11,7 @@ import content from "./content";
 import utility, { protectedUtilityRoutes } from "./utility";
 import music, { protectedMusicRoutes } from "./music";
 import siteConfig from "./siteConfig";
+import navigation from "./navigation";
 import { Bindings } from "../types";
 
 type Variables = {
@@ -31,6 +32,7 @@ const api = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>()
   .route("/music", music)
   .route("/music", protectedMusicRoutes)
   .route("/", siteConfig)
+  .route("/", navigation)
   .route("/", content)
   .route("/", utility)
   .route("/", protectedUtilityRoutes)

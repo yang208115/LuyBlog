@@ -26,112 +26,118 @@ export function FloatingPlayer() {
         left: { xs: 16, md: 36 },
         bottom: { xs: 76, md: 96 },
         zIndex: 1200,
-        borderRadius: 3,
-        p: { xs: 1.15, sm: 1.3 },
-        width: { xs: 136, sm: 176 },
-        height: { xs: 136, sm: 176 },
-        backdropFilter: "blur(18px) saturate(180%)",
-        WebkitBackdropFilter: "blur(18px) saturate(180%)",
+        borderRadius: 4,
+        p: { xs: 1.5, sm: 2 },
+        width: { xs: 150, sm: 200 },
+        height: { xs: 150, sm: 200 },
+        backdropFilter: "blur(20px) saturate(180%)",
+        WebkitBackdropFilter: "blur(20px) saturate(180%)",
         bgcolor: alpha(theme.palette.background.paper, theme.palette.mode === "dark" ? 0.48 : 0.62),
         border: `1px solid ${alpha(theme.palette.common.white, theme.palette.mode === "dark" ? 0.16 : 0.46)}`,
-        boxShadow: "0 18px 48px rgba(15,23,42,0.32)",
+        boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      <Stack spacing={{ xs: 0.85, sm: 1 }} sx={{ height: "100%" }}>
-        <Stack direction="row" spacing={0.9} alignItems="center" sx={{ minHeight: { xs: 50, sm: 56 } }}>
-          {music.current.cover ? (
-            <Box
-              component="img"
-              src={music.current.cover}
-              alt={music.current.title}
-              sx={{
-                width: { xs: 46, sm: 54 },
-                height: { xs: 46, sm: 54 },
-                borderRadius: 2,
-                objectFit: "cover",
-                flexShrink: 0,
-                animation: music.playing ? "luy-cover-pulse 2.8s ease-in-out infinite" : "none",
-                "@keyframes luy-cover-pulse": {
-                  "0%, 100%": { transform: "scale(1)" },
-                  "50%": { transform: "scale(1.04)" },
-                },
-              }}
-            />
-          ) : (
-            <Box
-              sx={{
-                width: { xs: 46, sm: 54 },
-                height: { xs: 46, sm: 54 },
-                borderRadius: 2,
-                flexShrink: 0,
-                display: "grid",
-                placeItems: "center",
-                fontWeight: 900,
-                color: "primary.main",
-                background: alpha(theme.palette.primary.main, 0.12),
-              }}
-            >
-              ♪
-            </Box>
-          )}
-          <Box component={RouterLink} to="/music" sx={{ minWidth: 0, color: "inherit", textDecoration: "none" }}>
-            <Typography variant="body2" noWrap sx={{ fontWeight: 900, lineHeight: 1.25 }}>
-              {music.current.title}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block", mt: 0.3 }}>
-              {music.current.artist || "Cloud Music"}
-            </Typography>
-          </Box>
-        </Stack>
-
-        <Box
-          component={RouterLink}
-          to="/music"
-          sx={{
-            minHeight: { xs: 34, sm: 38 },
-            color: "inherit",
-            textDecoration: "none",
-            borderRadius: 2,
-            px: 0.9,
-            py: { xs: 0.6, sm: 0.75 },
-            bgcolor: alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.2 : 0.06),
-          }}
-        >
-          <Typography
-            variant="caption"
-            color="text.secondary"
+      <Stack direction="row" spacing={1.5} alignItems="center">
+        {music.current.cover ? (
+          <Box
+            component="img"
+            src={music.current.cover}
+            alt={music.current.title}
             sx={{
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-              lineHeight: 1.45,
+              width: { xs: 40, sm: 50 },
+              height: { xs: 40, sm: 50 },
+              borderRadius: "50%",
+              objectFit: "cover",
+              flexShrink: 0,
+              animation: music.playing ? "luy-cover-spin 10s linear infinite" : "none",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              "@keyframes luy-cover-spin": {
+                "0%": { transform: "rotate(0deg)" },
+                "100%": { transform: "rotate(360deg)" },
+              },
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              width: { xs: 40, sm: 50 },
+              height: { xs: 40, sm: 50 },
+              borderRadius: "50%",
+              flexShrink: 0,
+              display: "grid",
+              placeItems: "center",
+              fontWeight: 900,
+              color: "primary.main",
+              background: alpha(theme.palette.primary.main, 0.12),
             }}
           >
-            {music.error || activeLyric}
-          </Typography>
-        </Box>
-
-        <Stack direction="row" spacing={0.7} alignItems="center" justifyContent="space-between" sx={{ mt: "auto" }}>
-          <IconButton
-            size="small"
-            onClick={music.toggle}
-            aria-label={music.playing ? "暂停" : "播放"}
-            sx={{ bgcolor: "primary.main", color: "white", "&:hover": { bgcolor: "primary.dark" } }}
-          >
-            {music.playing ? <PauseRounded /> : <PlayArrowRounded />}
-          </IconButton>
-          <Typography variant="caption" noWrap sx={{ flex: 1, fontWeight: 800, textAlign: "center" }}>
+            ♪
+          </Box>
+        )}
+        <Box component={RouterLink} to="/music" sx={{ minWidth: 0, color: "inherit", textDecoration: "none" }}>
+          <Typography variant="subtitle2" noWrap sx={{ fontWeight: 800, lineHeight: 1.2 }}>
             {music.current.title}
           </Typography>
-          <IconButton size="small" onClick={music.next} aria-label="下一首">
-            <SkipNextRounded />
-          </IconButton>
-          <IconButton size="small" onClick={() => void music.refreshCurrent()} aria-label="刷新歌曲链接">
-            <RefreshRounded />
-          </IconButton>
-        </Stack>
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block", mt: 0.2, fontWeight: 500 }}>
+            {music.current.artist || "Cloud Music"}
+          </Typography>
+        </Box>
+      </Stack>
+
+      <Box
+        component={RouterLink}
+        to="/music"
+        sx={{
+          flex: 1,
+          mt: 1.5,
+          color: "inherit",
+          textDecoration: "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+        }}
+      >
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            lineHeight: 1.5,
+            fontWeight: 600,
+          }}
+        >
+          {music.error || activeLyric}
+        </Typography>
+      </Box>
+
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ mt: 1 }}>
+        <IconButton size="small" onClick={() => void music.refreshCurrent()} aria-label="刷新歌曲链接" sx={{ color: "text.secondary" }}>
+          <RefreshRounded fontSize="small" />
+        </IconButton>
+        <IconButton
+          onClick={music.toggle}
+          aria-label={music.playing ? "暂停" : "播放"}
+          sx={{
+            bgcolor: "primary.main",
+            color: "primary.contrastText",
+            width: 38,
+            height: 38,
+            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`,
+            "&:hover": { bgcolor: "primary.dark" },
+          }}
+        >
+          {music.playing ? <PauseRounded fontSize="small" /> : <PlayArrowRounded fontSize="small" />}
+        </IconButton>
+        <IconButton size="small" onClick={music.next} aria-label="下一首" sx={{ color: "text.secondary" }}>
+          <SkipNextRounded fontSize="small" />
+        </IconButton>
       </Stack>
     </Paper>
   );

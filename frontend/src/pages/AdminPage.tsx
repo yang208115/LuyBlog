@@ -6,6 +6,7 @@ import { CommentManager, UserManager } from "../admin/ReviewManagers";
 import { FriendLinkManager } from "../admin/FriendLinkManager";
 import { MomentManager } from "../admin/MomentManager";
 import { MusicManager } from "../admin/MusicManager";
+import { NavigationManager } from "../admin/NavigationManager";
 import { PageManager } from "../admin/PageManager";
 import { PostManager } from "../admin/PostManager";
 import { ProjectManager } from "../admin/ProjectManager";
@@ -17,6 +18,7 @@ import { useAuth } from "../hooks/useAuth";
 const subtitles: Record<AdminSection, string> = {
   dashboard: "站点内容和运营数据概览",
   settings: "修改前台站点文案、图片、链接和运行参数",
+  navigation: "独立管理前台导航入口、链接和排序",
   posts: "创建、编辑和发布博客文章",
   moments: "管理日常瞬间，评论保持关闭",
   projects: "维护项目列表和展示顺序",
@@ -33,6 +35,8 @@ function renderSection(section: AdminSection) {
       return <AdminDashboard />;
     case "settings":
       return <SiteConfigManager />;
+    case "navigation":
+      return <NavigationManager />;
     case "posts":
       return <PostManager />;
     case "moments":

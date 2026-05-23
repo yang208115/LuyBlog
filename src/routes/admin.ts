@@ -2,18 +2,22 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { comments, friendLinks, moments, musicTracks, pages, posts, projects, users } from "../db/schema";
+import { comments, friendLinks, moments, musicTracks, navItems, pages, posts, projects, users } from "../db/schema";
 import {
+  CreateNavItemSchema,
   CreateFriendLinkSchema,
   CreateMomentSchema,
   CreateMusicTrackSchema,
   CreatePageSchema,
   CreatePostSchema,
   CreateProjectSchema,
+  ImportMusicPlaylistSchema,
+  ReorderNavItemsSchema,
   UpdateCommentStatusSchema,
   UpdateFriendLinkSchema,
   UpdateMomentSchema,
   UpdateMusicTrackSchema,
+  UpdateNavItemSchema,
   UpdatePageSchema,
   UpdatePostSchema,
   UpdateProjectSchema,
@@ -25,6 +29,7 @@ import { authMiddleware } from "../middleware/auth";
 import { adminMiddleware } from "../middleware/admin";
 import type { Bindings } from "../types";
 import { ensureSiteSettingsTable, getSiteConfig, SITE_CONFIG_KEY } from "./siteConfig";
+import { seedDefaultNavItems } from "./navigation";
 
 type Variables = {
   db: DrizzleD1Database<typeof schema>;
@@ -53,6 +58,25 @@ type NeteaseLyricResponse = {
   lrc?: {
     lyric?: string;
   };
+};
+
+type NeteasePlaylistResponse = {
+  code?: number;
+  result?: {
+    tracks?: NeteasePlaylistTrack[];
+  };
+  playlist?: {
+    tracks?: NeteasePlaylistTrack[];
+  };
+};
+
+type NeteasePlaylistTrack = {
+  id?: number | string;
+  name?: string;
+  artists?: Array<{ name?: string }>;
+  ar?: Array<{ name?: string }>;
+  album?: { name?: string; picUrl?: string; blurPicUrl?: string };
+  al?: { name?: string; picUrl?: string };
 };
 
 async function resolveMusicUrl(neteaseId: string, level: string) {
@@ -94,6 +118,35 @@ async function resolveMusicLyric(neteaseId: string) {
   const data = (await response.json()) as NeteaseLyricResponse;
   if (data.code !== 200) throw new Error("歌词接口未返回成功状态");
   return data.lrc?.lyric || null;
+}
+
+function extractPlaylistId(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(/[?&]id=(\d+)/) ?? trimmed.match(/playlist\/(?:detail\/)?(\d+)/) ?? trimmed.match(/^(\d+)$/);
+  return match?.[1] ?? null;
+}
+
+async function resolvePlaylistTracks(playlistId: string) {
+  const response = await fetch(`https://music.163.com/api/playlist/detail?id=${encodeURIComponent(playlistId)}`, {
+    headers: { accept: "application/json", "user-agent": "LuyBlog/1.0" },
+  });
+  if (!response.ok) throw new Error(`歌单接口返回 ${response.status}`);
+  const data = (await response.json()) as NeteasePlaylistResponse;
+  const tracks = data.result?.tracks ?? data.playlist?.tracks ?? [];
+  if (data.code !== 200 || tracks.length === 0) throw new Error("歌单接口未返回歌曲信息");
+  return tracks;
+}
+
+function playlistTrackToMusicTrack(track: NeteasePlaylistTrack) {
+  const neteaseId = track.id ? String(track.id) : "";
+  const artists = track.artists ?? track.ar ?? [];
+  return {
+    neteaseId,
+    title: track.name || neteaseId,
+    artist: artists.map((artist) => artist.name).filter(Boolean).join(" / ") || null,
+    album: track.album?.name ?? track.al?.name ?? null,
+    cover: track.album?.picUrl ?? track.album?.blurPicUrl ?? track.al?.picUrl ?? null,
+  };
 }
 
 function jsonArray(values: string[]) {
@@ -156,6 +209,81 @@ app.put("/site-config", async (c) => {
     .onConflictDoUpdate({ target: schema.siteSettings.key, set: { value, updatedAt: new Date() } });
 
   return c.json(parsed.data);
+});
+
+app.get("/nav-items", async (c) => {
+  const db = c.get("db");
+  await seedDefaultNavItems(db);
+  const rows = await db.select().from(navItems).orderBy(navItems.sortOrder, desc(navItems.createdAt));
+  return c.json({
+    items: rows.map((row) => ({
+      id: row.id,
+      label: row.label,
+      path: row.path,
+      sortOrder: row.sortOrder,
+      status: row.status,
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+  });
+});
+
+app.post("/nav-items", async (c) => {
+  const db = c.get("db");
+  await seedDefaultNavItems(db);
+  const parsed = CreateNavItemSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "导航参数不合法" }, 400);
+  const now = new Date();
+  const [created] = await db
+    .insert(navItems)
+    .values({ ...parsed.data, createdAt: now, updatedAt: now })
+    .returning();
+  return c.json({
+    ...created,
+    updatedAt: created.updatedAt.toISOString(),
+  });
+});
+
+app.patch("/nav-items/reorder", async (c) => {
+  const db = c.get("db");
+  await seedDefaultNavItems(db);
+  const parsed = ReorderNavItemsSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "导航排序参数不合法" }, 400);
+
+  const now = new Date();
+  await Promise.all(
+    parsed.data.ids.map((id, index) =>
+      db
+        .update(navItems)
+        .set({ sortOrder: index * 10, updatedAt: now })
+        .where(eq(navItems.id, id)),
+    ),
+  );
+
+  return c.json({ success: true });
+});
+
+app.patch("/nav-items/:id", async (c) => {
+  const db = c.get("db");
+  await seedDefaultNavItems(db);
+  const parsed = UpdateNavItemSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "导航参数不合法" }, 400);
+  const [updated] = await db
+    .update(navItems)
+    .set({ ...parsed.data, updatedAt: new Date() })
+    .where(eq(navItems.id, c.req.param("id")))
+    .returning();
+  if (!updated) return c.json({ code: 404, message: "导航不存在" }, 404);
+  return c.json({
+    ...updated,
+    updatedAt: updated.updatedAt.toISOString(),
+  });
+});
+
+app.delete("/nav-items/:id", async (c) => {
+  const db = c.get("db");
+  await seedDefaultNavItems(db);
+  await db.delete(navItems).where(eq(navItems.id, c.req.param("id")));
+  return c.json({ success: true });
 });
 
 app.get("/posts", async (c) => {
@@ -656,6 +784,65 @@ app.post("/music-tracks", async (c) => {
     })
     .returning();
   return c.json(created);
+});
+
+app.post("/music-tracks/import-playlist", async (c) => {
+  const db = c.get("db");
+  const parsed = ImportMusicPlaylistSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ code: 400, message: "歌单参数不合法" }, 400);
+
+  const playlistId = extractPlaylistId(parsed.data.playlist);
+  if (!playlistId) return c.json({ code: 400, message: "请输入网易云歌单 ID 或链接" }, 400);
+
+  try {
+    const tracks = (await resolvePlaylistTracks(playlistId))
+      .map(playlistTrackToMusicTrack)
+      .filter((track) => /^\d+$/.test(track.neteaseId));
+    if (tracks.length === 0) return c.json({ code: 400, message: "歌单中没有可导入的歌曲" }, 400);
+
+    const existing = await db.select({ neteaseId: musicTracks.neteaseId, sortOrder: musicTracks.sortOrder }).from(musicTracks);
+    const existingIds = new Set(existing.map((item) => item.neteaseId));
+    const imported = [];
+    let skipped = 0;
+    let sortOrder =
+      parsed.data.startSortOrder ??
+      Math.max(0, ...existing.map((item) => item.sortOrder)) + 1;
+
+    for (const track of tracks) {
+      if (existingIds.has(track.neteaseId)) {
+        skipped += 1;
+        continue;
+      }
+      const [created] = await db
+        .insert(musicTracks)
+        .values({
+          neteaseId: track.neteaseId,
+          title: track.title,
+          artist: track.artist,
+          album: track.album,
+          cover: track.cover,
+          level: parsed.data.level,
+          sortOrder,
+          status: parsed.data.status,
+          updatedAt: new Date(),
+        })
+        .returning();
+      imported.push(created);
+      existingIds.add(track.neteaseId);
+      sortOrder += 1;
+    }
+
+    return c.json({
+      playlistId,
+      imported: imported.length,
+      skipped,
+      total: tracks.length,
+      items: imported,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "导入歌单失败";
+    return c.json({ code: 502, message }, 502);
+  }
 });
 
 app.patch("/music-tracks/:id", async (c) => {

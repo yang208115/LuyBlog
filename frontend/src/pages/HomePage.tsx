@@ -1,4 +1,4 @@
-import { Alert, Box, CircularProgress, Stack } from "@mui/material";
+import { Alert, Box, Stack } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { SearchBar } from "../components/SearchBar";
 import {
@@ -10,6 +10,7 @@ import {
 } from "../components/HomeBento";
 import { PublicPageLayout } from "../components/Layout";
 import { contentApi } from "../services/content";
+import { ModernLoader } from "../components/Loading";
 
 export default function HomePage() {
   const postsQuery = useQuery({ queryKey: ["home", "posts"], queryFn: () => contentApi.posts(8) });
@@ -27,8 +28,8 @@ export default function HomePage() {
       </Box>
 
       {postsQuery.isLoading && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
-          <CircularProgress />
+        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+          <ModernLoader size={56} />
         </Box>
       )}
 

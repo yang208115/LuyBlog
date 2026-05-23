@@ -89,6 +89,19 @@ export const CreateFriendLinkSchema = z.object({
 
 export const UpdateFriendLinkSchema = CreateFriendLinkSchema.partial();
 
+export const CreateNavItemSchema = z.object({
+  label: z.string().trim().min(1).max(40),
+  path: z.string().trim().min(1).max(1000),
+  sortOrder: z.number().int().min(0).max(9999).default(0),
+  status: z.enum(["enabled", "disabled"]).default("enabled"),
+});
+
+export const UpdateNavItemSchema = CreateNavItemSchema.partial();
+
+export const ReorderNavItemsSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(100),
+});
+
 export const ApplyFriendLinkSchema = CreateFriendLinkSchema.pick({
   name: true,
   url: true,
@@ -122,6 +135,13 @@ export const CreateMusicTrackSchema = z.object({
 });
 
 export const UpdateMusicTrackSchema = CreateMusicTrackSchema.partial();
+
+export const ImportMusicPlaylistSchema = z.object({
+  playlist: z.string().trim().min(1).max(300),
+  level: z.string().trim().min(1).max(40).default("exhigh"),
+  status: z.enum(["enabled", "disabled"]).default("enabled"),
+  startSortOrder: z.number().int().min(0).max(9999).optional(),
+});
 
 export const SiteConfigSchema = z.object({
   title: z.string().trim().min(1).max(120),

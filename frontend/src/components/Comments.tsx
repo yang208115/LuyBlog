@@ -1,8 +1,9 @@
-import { Alert, Box, Button, Card, CardContent, CircularProgress, Stack, TextField, Typography, useTheme } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography, useTheme } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { fetchWithAuth, useAuth } from "../hooks/useAuth";
+import { ModernLoader } from "./Loading";
 
 type CommentTarget = "post";
 
@@ -112,7 +113,7 @@ export function Comments({ targetType, targetSlug }: { targetType: CommentTarget
 
       {commentsQuery.isLoading && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-          <CircularProgress size={22} />
+          <ModernLoader size={22} />
         </Box>
       )}
       {commentsQuery.isError && <Alert severity="warning">评论加载失败。</Alert>}

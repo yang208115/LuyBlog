@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   InputAdornment,
   Stack,
   TextField,
@@ -27,6 +26,7 @@ import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-d
 import { interactiveGlassCardSx, SectionPanel } from "../components/Glass";
 import { PublicPageLayout } from "../components/Layout";
 import { contentApi, type SearchResultItem, type SearchResultType } from "../services/content";
+import { ModernLoader } from "../components/Loading";
 
 const typeMeta: Record<
   SearchResultType,
@@ -228,7 +228,7 @@ export function SearchPage() {
 
       {query.isLoading && (
         <SectionPanel sx={{ display: "flex", justifyContent: "center" }}>
-          <CircularProgress />
+          <ModernLoader size={40} />
         </SectionPanel>
       )}
 

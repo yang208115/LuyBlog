@@ -177,6 +177,26 @@ export const friendLinks = sqliteTable(
   (table) => [index("friend_links_status_sort_idx").on(table.status, table.sortOrder)],
 );
 
+export const navItems = sqliteTable(
+  "nav_items",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    label: text("label").notNull(),
+    path: text("path").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    status: text("status", { enum: ["enabled", "disabled"] }).notNull().default("enabled"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(strftime('%s', 'now'))`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(strftime('%s', 'now'))`),
+  },
+  (table) => [index("nav_items_status_sort_idx").on(table.status, table.sortOrder)],
+);
+
 export const musicTracks = sqliteTable(
   "music_tracks",
   {

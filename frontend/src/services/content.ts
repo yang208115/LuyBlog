@@ -63,6 +63,13 @@ export type FriendLinkItem = {
   avatarUrl: string | null;
 };
 
+export type NavItem = {
+  id: string;
+  label: string;
+  path: string;
+  sortOrder: number;
+};
+
 export type FriendLinkApplyPayload = {
   name: string;
   description: string;
@@ -130,5 +137,6 @@ export const contentApi = {
   page: (slug: string) => getJson<{ title: string; slug: string; contentMd: string }>(`/api/pages/${slug}`),
   projects: () => getJson<ProjectItem[]>("/api/projects"),
   friendLinks: () => getJson<FriendLinkItem[]>("/api/friend-links"),
+  navigation: () => getJson<NavItem[]>("/api/navigation"),
   applyFriendLink: (body: FriendLinkApplyPayload) => postJson<{ success: true }>("/api/friend-links/apply", body),
 };

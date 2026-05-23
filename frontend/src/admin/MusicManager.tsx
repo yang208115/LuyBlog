@@ -1,5 +1,5 @@
-import { Avatar, Box, Button, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
-import { DeleteOutlineRounded, EditRounded, RefreshRounded } from "@mui/icons-material";
+import { Alert, Avatar, Box, Button, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
+import { DeleteOutlineRounded, EditRounded, QueueMusicRounded, RefreshRounded } from "@mui/icons-material";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminMusicTrack, adminApi } from "./adminApi";
@@ -16,18 +16,63 @@ export function MusicManager() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AdminMusicTrack | null>(null);
   const [form, setForm] = useState<MusicForm>(emptyForm);
+  const [playlist, setPlaylist] = useState("");
+  const [playlistLevel, setPlaylistLevel] = useState("exhigh");
+  const [playlistStatus, setPlaylistStatus] = useState<MusicForm["status"]>("enabled");
+  const [importResult, setImportResult] = useState<string | null>(null);
   const query = useQuery({ queryKey: ["admin", "music-tracks"], queryFn: adminApi.music });
   const createMutation = useMutation({ mutationFn: adminApi.createMusic, onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["admin", "music-tracks"] }) });
   const updateMutation = useMutation({ mutationFn: ({ id, body }: { id: string; body: ReturnType<typeof payload> }) => adminApi.updateMusic(id, body), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["admin", "music-tracks"] }) });
+  const importMutation = useMutation({
+    mutationFn: adminApi.importMusicPlaylist,
+    onSuccess: async (result) => {
+      setImportResult(`歌单 ${result.playlistId}：导入 ${result.imported} 首，跳过 ${result.skipped} 首`);
+      await queryClient.invalidateQueries({ queryKey: ["admin", "music-tracks"] });
+    },
+  });
   const refreshMutation = useMutation({ mutationFn: adminApi.refreshMusic, onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["admin", "music-tracks"] }) });
   const deleteMutation = useMutation({ mutationFn: adminApi.deleteMusic, onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["admin", "music-tracks"] }) });
   const items = query.data?.items ?? [];
   const filtered = useMemo(() => items.filter((item) => !search.trim() || [item.title, item.artist, item.neteaseId].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())), [items, search]);
   const start = (item?: AdminMusicTrack) => { setEditing(item ?? null); setForm(fromTrack(item)); setOpen(true); };
   const save = () => { const body = payload(form); const options = { onSuccess: () => setOpen(false) }; editing ? updateMutation.mutate({ id: editing.id, body }, options) : createMutation.mutate(body, options); };
+  const importPlaylist = () => {
+    setImportResult(null);
+    importMutation.mutate({ playlist, level: playlistLevel, status: playlistStatus });
+  };
   return (
     <Box>
       <AdminToolbar search={search} onSearch={setSearch} onRefresh={() => void query.refetch()} onCreate={() => start()} createLabel="添加歌曲" />
+      <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
+        <Stack direction={{ xs: "column", lg: "row" }} spacing={2} alignItems={{ xs: "stretch", lg: "center" }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="网易云歌单 ID 或链接"
+            value={playlist}
+            onChange={(e) => setPlaylist(e.target.value)}
+          />
+          <TextField size="small" label="音质" value={playlistLevel} onChange={(e) => setPlaylistLevel(e.target.value)} sx={{ minWidth: 120 }} />
+          <TextField size="small" select label="状态" value={playlistStatus} onChange={(e) => setPlaylistStatus(e.target.value as MusicForm["status"])} sx={{ minWidth: 120 }}>
+            <MenuItem value="enabled">启用</MenuItem>
+            <MenuItem value="disabled">禁用</MenuItem>
+          </TextField>
+          <Button
+            variant="contained"
+            startIcon={<QueueMusicRounded />}
+            disabled={!playlist.trim() || importMutation.isPending}
+            onClick={importPlaylist}
+            sx={{ borderRadius: 2, minWidth: 120 }}
+          >
+            {importMutation.isPending ? "导入中" : "导入歌单"}
+          </Button>
+        </Stack>
+        {(importResult || importMutation.error) && (
+          <Alert severity={importMutation.error ? "error" : "success"} sx={{ mt: 2, borderRadius: 2 }}>
+            {importMutation.error instanceof Error ? importMutation.error.message : importResult}
+          </Alert>
+        )}
+      </Paper>
       <StateBlock loading={query.isLoading} error={query.error} empty={!query.isLoading && filtered.length === 0} />
       {filtered.length > 0 && <Paper variant="outlined"><Table size="small"><TableHead><TableRow><TableCell>歌曲</TableCell><TableCell>缓存</TableCell><TableCell>排序</TableCell><TableCell>状态</TableCell><TableCell align="right">操作</TableCell></TableRow></TableHead><TableBody>{filtered.map((item) => <TableRow key={item.id} hover><TableCell><Stack direction="row" spacing={1} alignItems="center"><Avatar src={item.cover ?? undefined} variant="rounded" /><Box><Typography sx={{ fontWeight: 800 }}>{item.title}</Typography><Typography variant="caption" color="text.secondary">ID {item.neteaseId} · {item.artist || "未知歌手"}</Typography></Box></Stack></TableCell><TableCell>{item.cachedUrl ? "已缓存" : "未缓存"}{item.cacheExpiresAt ? ` · ${new Date(item.cacheExpiresAt).toLocaleString("zh-CN")}` : ""}</TableCell><TableCell>{item.sortOrder}</TableCell><TableCell><StatusChip status={item.status} /></TableCell><TableCell align="right"><Button size="small" startIcon={<EditRounded />} onClick={() => start(item)}>编辑</Button><Button size="small" startIcon={<RefreshRounded />} onClick={() => refreshMutation.mutate(item.id)}>刷新</Button><Button size="small" color="error" startIcon={<DeleteOutlineRounded />} onClick={() => deleteMutation.mutate(item.id)}>删除</Button></TableCell></TableRow>)}</TableBody></Table></Paper>}
       <EntityDialog open={open} title={editing ? "编辑歌曲" : "添加歌曲"} saving={createMutation.isPending || updateMutation.isPending} onClose={() => setOpen(false)} onSave={save}>

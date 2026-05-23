@@ -1,4 +1,4 @@
-import { Card, CardContent, CircularProgress, Stack, Typography, useTheme } from "@mui/material";
+import { Card, CardContent, Stack, Typography, useTheme } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ import { useRef } from "react";
 import { z } from "zod";
 import { safeLocalStorage } from "../utils/storage";
 import { CenteredStateLayout } from "../components/Layout";
+import { ModernLoader } from "../components/Loading";
 
 export function AuthCallbackPage() {
   const theme = useTheme();
@@ -78,7 +79,7 @@ export function AuthCallbackPage() {
       >
         <CardContent sx={{ py: 4 }}>
           <Stack spacing={1.6} alignItems="center" textAlign="center">
-            <CircularProgress />
+            <ModernLoader size={40} />
             <Typography sx={{ fontWeight: 600 }}>正在验证您的身份，请稍候...</Typography>
             <Typography variant="body2" color="text.secondary">
               验证完成后将自动回到首页。

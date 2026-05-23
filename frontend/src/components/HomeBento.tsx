@@ -1,4 +1,5 @@
 import { Avatar, Box, ButtonBase, Chip, IconButton, Stack, Typography, useTheme } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { GitHub, MailRounded, PauseRounded, PlayArrowRounded, RefreshRounded, SkipNextRounded } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
@@ -74,36 +75,71 @@ function Stat({ count, label, color }: { count: number; label: string; color: st
 
 export function CloudPlayerBento() {
   const music = useMusic();
+  const theme = useTheme();
   const lyricLines = parseLrc(music.current.lyric);
   const activeLyric =
     lyricLines.reduce((active, line) => (line.time <= music.currentTime + 0.25 ? line : active), lyricLines[0])?.text ||
     (music.current.lyric ? "歌词加载中..." : "") ||
     "暂无歌词";
   return (
-    <Box sx={{ ...glassPanelSx, p: 3, minHeight: 278, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-      <Box>
-        <Typography variant="overline" color="primary.light" sx={{ fontWeight: 900, letterSpacing: 2 }}>
+    <Box sx={{ ...glassPanelSx, p: 3, minHeight: 278, display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative", overflow: "hidden" }}>
+      {music.current.cover && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: -20,
+            right: -20,
+            width: 140,
+            height: 140,
+            borderRadius: "50%",
+            backgroundImage: `url(${music.current.cover})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.15,
+            animation: music.playing ? "luy-cover-spin 15s linear infinite" : "none",
+            pointerEvents: "none",
+            "@keyframes luy-cover-spin": {
+              "0%": { transform: "rotate(0deg)" },
+              "100%": { transform: "rotate(360deg)" },
+            },
+          }}
+        />
+      )}
+      <Box sx={{ position: "relative", zIndex: 1 }}>
+        <Typography variant="overline" color="primary.main" sx={{ fontWeight: 900, letterSpacing: 2 }}>
           Cloud Music
         </Typography>
-        <Typography variant="h4" sx={{ fontWeight: 900, mt: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 900, mt: 1, letterSpacing: "-0.02em" }}>
           {music.current.title}
         </Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+        <Typography color="text.secondary" sx={{ mt: 0.5, fontWeight: 500 }}>
           {music.loading ? "加载歌单中..." : music.current.artist || `网易云 ID: ${music.current.neteaseId || "未配置"}`}
         </Typography>
       </Box>
-      <Box sx={{ p: 2, borderRadius: 2, bgcolor: "rgba(0,0,0,0.22)", color: "white" }}>
-        <Typography sx={{ fontWeight: 700 }}>{music.error || activeLyric}</Typography>
+      <Box sx={{ p: 2, borderRadius: 3, bgcolor: alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.3 : 0.05), color: "text.primary", position: "relative", zIndex: 1 }}>
+        <Typography sx={{ fontWeight: 700, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {music.error || activeLyric}
+        </Typography>
       </Box>
-      <Stack direction="row" spacing={1}>
-        <IconButton onClick={music.toggle} sx={{ bgcolor: "primary.main", color: "white", "&:hover": { bgcolor: "primary.dark" } }}>
+      <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" sx={{ position: "relative", zIndex: 1 }}>
+        <IconButton onClick={() => void music.refreshCurrent()} sx={{ bgcolor: alpha(theme.palette.text.primary, 0.05), color: "text.primary" }}>
+          <RefreshRounded />
+        </IconButton>
+        <IconButton
+          onClick={music.toggle}
+          sx={{
+            bgcolor: "primary.main",
+            color: "primary.contrastText",
+            width: 48,
+            height: 48,
+            boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
+            "&:hover": { bgcolor: "primary.dark" }
+          }}
+        >
           {music.playing ? <PauseRounded /> : <PlayArrowRounded />}
         </IconButton>
-        <IconButton onClick={music.next} sx={{ bgcolor: "rgba(255,255,255,0.28)" }}>
+        <IconButton onClick={music.next} sx={{ bgcolor: alpha(theme.palette.text.primary, 0.05), color: "text.primary" }}>
           <SkipNextRounded />
-        </IconButton>
-        <IconButton onClick={() => void music.refreshCurrent()} sx={{ bgcolor: "rgba(255,255,255,0.28)" }}>
-          <RefreshRounded />
         </IconButton>
       </Stack>
     </Box>

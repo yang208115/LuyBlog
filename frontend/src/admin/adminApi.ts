@@ -77,6 +77,15 @@ export type AdminFriendLink = {
   updatedAt: string;
 };
 
+export type AdminNavItem = {
+  id: string;
+  label: string;
+  path: string;
+  sortOrder: number;
+  status: "enabled" | "disabled";
+  updatedAt: string;
+};
+
 export type AdminCommentItem = {
   id: string;
   content: string;
@@ -108,6 +117,21 @@ export type AdminMusicTrack = {
   sortOrder: number;
   status: "enabled" | "disabled";
   updatedAt: string;
+};
+
+export type ImportMusicPlaylistPayload = {
+  playlist: string;
+  level?: string;
+  status?: "enabled" | "disabled";
+  startSortOrder?: number;
+};
+
+export type ImportMusicPlaylistResult = {
+  playlistId: string;
+  imported: number;
+  skipped: number;
+  total: number;
+  items: AdminMusicTrack[];
 };
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -157,8 +181,14 @@ export const adminApi = {
   createFriendLink: (body: Omit<AdminFriendLink, "id" | "updatedAt">) => request<AdminFriendLink>("/api/admin/friend-links", json("POST", body)),
   updateFriendLink: (id: string, body: Partial<Omit<AdminFriendLink, "id" | "updatedAt">>) => request<AdminFriendLink>(`/api/admin/friend-links/${id}`, json("PATCH", body)),
   deleteFriendLink: (id: string) => request<{ success: true }>(`/api/admin/friend-links/${id}`, { method: "DELETE" }),
+  navItems: () => request<ListResponse<AdminNavItem>>("/api/admin/nav-items"),
+  createNavItem: (body: Omit<AdminNavItem, "id" | "updatedAt">) => request<AdminNavItem>("/api/admin/nav-items", json("POST", body)),
+  updateNavItem: (id: string, body: Partial<Omit<AdminNavItem, "id" | "updatedAt">>) => request<AdminNavItem>(`/api/admin/nav-items/${id}`, json("PATCH", body)),
+  reorderNavItems: (ids: string[]) => request<{ success: true }>("/api/admin/nav-items/reorder", json("PATCH", { ids })),
+  deleteNavItem: (id: string) => request<{ success: true }>(`/api/admin/nav-items/${id}`, { method: "DELETE" }),
   music: () => request<ListResponse<AdminMusicTrack>>("/api/admin/music-tracks"),
   createMusic: (body: Partial<AdminMusicTrack> & { neteaseId: string }) => request<AdminMusicTrack>("/api/admin/music-tracks", json("POST", body)),
+  importMusicPlaylist: (body: ImportMusicPlaylistPayload) => request<ImportMusicPlaylistResult>("/api/admin/music-tracks/import-playlist", json("POST", body)),
   updateMusic: (id: string, body: Partial<AdminMusicTrack>) => request<AdminMusicTrack>(`/api/admin/music-tracks/${id}`, json("PATCH", body)),
   refreshMusic: (id: string) => request<AdminMusicTrack>(`/api/admin/music-tracks/${id}/refresh`, { method: "POST" }),
   deleteMusic: (id: string) => request<{ success: true }>(`/api/admin/music-tracks/${id}`, { method: "DELETE" }),

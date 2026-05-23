@@ -11,7 +11,6 @@ import {
   Menu,
   MenuItem,
   IconButton,
-  CircularProgress,
   Stack,
   Drawer,
   List,
@@ -26,6 +25,7 @@ import {
   MenuRounded,
 } from "@mui/icons-material";
 import { alpha } from "@mui/material/styles";
+import { useQuery } from "@tanstack/react-query";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Footer } from "./components/Footer";
@@ -34,23 +34,28 @@ import { FloatingPlayer } from "./components/FloatingPlayer";
 import { ToggleThemeButton } from "./components/ToggleThemeButton";
 import { useAuth } from "./hooks/useAuth";
 import { useSiteConfig } from "./context/SiteConfigProvider";
+import { ModernLoader } from "./components/Loading";
+import { defaultNavItems } from "./config/navigation";
+import { contentApi } from "./services/content";
 
-const navItems = [
-  { label: "首页", to: "/", active: (path: string) => path === "/" },
-  { label: "归档", to: "/blog", active: (path: string) => path.startsWith("/blog") || path.startsWith("/posts") },
-  { label: "搜索", to: "/search", active: (path: string) => path.startsWith("/search") },
-  { label: "瞬间", to: "/moments", active: (path: string) => path.startsWith("/moments") },
-  { label: "项目", to: "/projects", active: (path: string) => path.startsWith("/projects") },
-  { label: "音乐", to: "/music", active: (path: string) => path.startsWith("/music") },
-  { label: "友链", to: "/friends", active: (path: string) => path.startsWith("/friends") },
-  { label: "关于", to: "/about", active: (path: string) => path.startsWith("/about") },
-];
+function isExternalPath(path: string) {
+  return /^(https?:)?\/\//.test(path) || path.startsWith("mailto:") || path.startsWith("tel:");
+}
+
+function isActiveNav(pathname: string, targetPath: string) {
+  if (isExternalPath(targetPath)) return false;
+  if (targetPath === "/") return pathname === "/";
+  if (targetPath === "/blog") return pathname.startsWith("/blog") || pathname.startsWith("/posts");
+  return pathname === targetPath || pathname.startsWith(`${targetPath.replace(/\/$/, "")}/`);
+}
 
 function App() {
   const location = useLocation();
   const theme = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const siteConfig = useSiteConfig();
+  const navQuery = useQuery({ queryKey: ["navigation"], queryFn: contentApi.navigation, staleTime: 5 * 60 * 1000 });
+  const navItems = navQuery.data?.length ? navQuery.data : defaultNavItems;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const isAdminRoute = location.pathname.startsWith("/admin");
@@ -151,25 +156,32 @@ function App() {
                   border: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
                 }}
               >
-                {navItems.map((item) => (
-                  <Button
-                    key={item.to}
-                    component={RouterLink}
-                    to={item.to}
-                    sx={{
-                      borderRadius: 999,
-                      px: 1.4,
-                      fontWeight: item.active(location.pathname) ? 700 : 500,
-                      backgroundColor: item.active(location.pathname)
-                        ? alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.24 : 0.12)
-                        : "transparent",
-                      color: item.active(location.pathname) ? "primary.main" : "text.primary",
-                      border: "1px solid transparent",
-                    }}
-                  >
-                    {item.label}
-                  </Button>
-                ))}
+                {navItems.map((item) => {
+                  const external = isExternalPath(item.path);
+                  const active = isActiveNav(location.pathname, item.path);
+                  return (
+                    <Button
+                      key={`${item.label}-${item.path}`}
+                      component={external ? "a" : RouterLink}
+                      href={external ? item.path : undefined}
+                      to={external ? undefined : item.path}
+                      target={external ? "_blank" : undefined}
+                      rel={external ? "noreferrer" : undefined}
+                      sx={{
+                        borderRadius: 999,
+                        px: 1.4,
+                        fontWeight: active ? 700 : 500,
+                        backgroundColor: active
+                          ? alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.24 : 0.12)
+                          : "transparent",
+                        color: active ? "primary.main" : "text.primary",
+                        border: "1px solid transparent",
+                      }}
+                    >
+                      {item.label}
+                    </Button>
+                  );
+                })}
 
                 {isAuthenticated && user?.role === "admin" && (
                   <Button
@@ -193,7 +205,7 @@ function App() {
               <ToggleThemeButton />
 
               {isLoading ? (
-                <CircularProgress size={20} sx={{ ml: 0.5 }} />
+                <ModernLoader size={20} />
               ) : isAuthenticated ? (
                 <>
                   <IconButton
@@ -265,12 +277,16 @@ function App() {
           </Stack>
           <List sx={{ display: "grid", gap: 0.6 }}>
             {navItems.map((item) => {
-              const active = item.active(location.pathname);
+              const external = isExternalPath(item.path);
+              const active = isActiveNav(location.pathname, item.path);
               return (
                 <ListItemButton
-                  key={item.to}
-                  component={RouterLink}
-                  to={item.to}
+                  key={`${item.label}-${item.path}`}
+                  component={external ? "a" : RouterLink}
+                  href={external ? item.path : undefined}
+                  to={external ? undefined : item.path}
+                  target={external ? "_blank" : undefined}
+                  rel={external ? "noreferrer" : undefined}
                   onClick={() => setMobileOpen(false)}
                   sx={{
                     borderRadius: 2,

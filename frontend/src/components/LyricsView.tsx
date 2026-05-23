@@ -1,5 +1,5 @@
 import { Box, Stack, Typography } from "@mui/material";
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 
 type LyricLine = {
   time: number;
@@ -34,6 +34,9 @@ export function parseLrc(lrc: string | null | undefined): LyricLine[] {
 }
 
 export function LyricsView({ lyric, currentTime, onSeek }: { lyric: string | null | undefined; currentTime: number; onSeek?: (time: number) => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const activeLineRef = useRef<HTMLParagraphElement>(null);
+
   const lines = useMemo(() => parseLrc(lyric), [lyric]);
   const activeIndex = useMemo(() => {
     if (!lines.length) return -1;
@@ -45,6 +48,25 @@ export function LyricsView({ lyric, currentTime, onSeek }: { lyric: string | nul
     return active;
   }, [currentTime, lines]);
 
+  useEffect(() => {
+    if (activeLineRef.current && containerRef.current) {
+      const container = containerRef.current;
+      const activeLine = activeLineRef.current;
+
+      // Calculate the scroll position to center the active line
+      const containerHeight = container.clientHeight;
+      const lineTop = activeLine.offsetTop;
+      const lineHeight = activeLine.clientHeight;
+
+      const scrollTop = lineTop - containerHeight / 2 + lineHeight / 2;
+
+      container.scrollTo({
+        top: scrollTop,
+        behavior: "smooth"
+      });
+    }
+  }, [activeIndex]);
+
   if (!lines.length) {
     return (
       <Typography color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
@@ -54,13 +76,14 @@ export function LyricsView({ lyric, currentTime, onSeek }: { lyric: string | nul
   }
 
   return (
-    <Box sx={{ maxHeight: 360, overflowY: "auto", pr: 1 }}>
-      <Stack spacing={1.2}>
+    <Box ref={containerRef} sx={{ maxHeight: 360, overflowY: "auto", pr: 1, scrollBehavior: "smooth" }}>
+      <Stack spacing={1.2} sx={{ py: 10 }}>
         {lines.map((line, index) => {
           const active = index === activeIndex;
           return (
             <Typography
               key={`${line.time}-${index}`}
+              ref={active ? activeLineRef : null}
               onClick={() => onSeek?.(line.time)}
               sx={{
                 cursor: onSeek ? "pointer" : "default",

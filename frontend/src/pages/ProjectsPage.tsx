@@ -1,4 +1,4 @@
-import { Box, Button, Chip, CircularProgress, Paper, Stack, Typography, useTheme } from "@mui/material";
+import { Box, Button, Chip, Paper, Stack, Typography, useTheme } from "@mui/material";
 import { ArrowOutwardRounded, CodeRounded, GitHub as GitHubIcon, Inventory2Rounded } from "@mui/icons-material";
 import { alpha } from "@mui/material/styles";
 import { useQuery } from "@tanstack/react-query";
@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { glassPanelSx } from "../components/Glass";
 import { PublicPageLayout } from "../components/Layout";
 import { contentApi } from "../services/content";
+import { ModernLoader } from "../components/Loading";
 
 export function ProjectsPage() {
   const theme = useTheme();
@@ -65,7 +66,7 @@ export function ProjectsPage() {
 
       {query.isLoading && (
         <Paper sx={{ ...glassPanelSx, p: 4, display: "flex", justifyContent: "center" }}>
-          <CircularProgress />
+          <ModernLoader size={40} />
         </Paper>
       )}
 

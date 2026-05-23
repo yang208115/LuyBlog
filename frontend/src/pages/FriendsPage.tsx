@@ -1,4 +1,4 @@
-import { Alert, Avatar, Box, Button, Card, CardActionArea, CardContent, CircularProgress, Stack, TextField, Typography, useTheme } from "@mui/material";
+import { Alert, Avatar, Box, Button, Card, CardActionArea, CardContent, Stack, TextField, Typography, useTheme } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { SendRounded } from "@mui/icons-material";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { SectionPanel } from "../components/Glass";
 import { PublicPageLayout } from "../components/Layout";
 import { useSiteConfig } from "../context/SiteConfigProvider";
 import { contentApi } from "../services/content";
+import { ModernLoader } from "../components/Loading";
 
 type ApplyForm = {
   name: string;
@@ -93,7 +94,7 @@ export function FriendsPage() {
         <Typography color="text.secondary">这里放我常用和推荐的站点。</Typography>
       </SectionPanel>
 
-      {query.isLoading && <CircularProgress />}
+      {query.isLoading && <ModernLoader size={40} />}
       {(query.data ?? []).length > 0 && (
         <Box
           sx={{

@@ -108,7 +108,7 @@ export function SiteConfigManager() {
         <TextField multiline minRows={3} label="简介" value={form.bio} onChange={(e) => update("bio", e.target.value)} />
       </Section>
 
-      <Section title="导航和外观">
+      <Section title="导航品牌和外观">
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
           <TextField fullWidth label="导航前缀" value={form.navTitle} onChange={(e) => update("navTitle", e.target.value)} />
           <TextField fullWidth label="导航连接符" value={form.navSuffix} onChange={(e) => update("navSuffix", e.target.value)} />

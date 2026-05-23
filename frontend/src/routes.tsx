@@ -12,6 +12,7 @@ import { MomentsPage } from "./pages/MomentsPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { MusicPage } from "./pages/MusicPage";
 import { SearchPage } from "./pages/SearchPage";
+import { MarkdownPage } from "./pages/MarkdownPage";
 
 /**
  * 应用路由配置
@@ -40,6 +41,7 @@ export const AppRoutes = () => (
       <Route path="admin" element={<AdminPage />} />
       <Route path="admin/posts/:id" element={<AdminPostEditorPage />} />
       <Route path="auth/callback" element={<AuthCallbackPage />} />
+      <Route path=":slug" element={<MarkdownPage />} />
     </Route>
   </Routes>
 );

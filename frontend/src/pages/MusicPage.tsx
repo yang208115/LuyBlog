@@ -1,9 +1,10 @@
-import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 import { PauseRounded, PlayArrowRounded, RefreshRounded, SkipNextRounded } from "@mui/icons-material";
 import { glassPanelSx } from "../components/Glass";
 import { PublicPageLayout } from "../components/Layout";
 import { LyricsView } from "../components/LyricsView";
 import { useMusic } from "../context/MusicProvider";
+import { ModernLoader } from "../components/Loading";
 
 export function MusicPage() {
   const music = useMusic();
@@ -31,7 +32,7 @@ export function MusicPage() {
             </Stack>
 
             {music.error && <Alert severity="warning">{music.error}</Alert>}
-            {music.loading && <CircularProgress size={24} />}
+            {music.loading && <ModernLoader size={24} />}
             <LyricsView lyric={music.current.lyric} currentTime={music.currentTime} onSeek={music.seek} />
 
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>

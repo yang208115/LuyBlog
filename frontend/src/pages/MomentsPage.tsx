@@ -1,16 +1,17 @@
-import { Card, CardContent, CircularProgress, ImageList, ImageListItem, Stack, Typography } from "@mui/material";
+import { Card, CardContent, ImageList, ImageListItem, Stack, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { glassCardSx } from "../components/Glass";
 import { PublicPageLayout } from "../components/Layout";
 import { MarkdownView } from "../components/MarkdownView";
 import { contentApi } from "../services/content";
+import { ModernLoader } from "../components/Loading";
 
 export function MomentsPage() {
   const query = useQuery({ queryKey: ["moments"], queryFn: contentApi.moments });
 
   return (
     <PublicPageLayout maxWidth="md" title="瞬间" subtitle="像朋友圈一样记录日常片段。" spacing={2.2}>
-      {query.isLoading && <CircularProgress />}
+      {query.isLoading && <ModernLoader size={40} />}
       {query.data?.map((moment) => (
         <Card key={moment.id} variant="outlined" sx={glassCardSx}>
           <CardContent sx={{ p: { xs: 2.2, md: 3 } }}>
