@@ -40,9 +40,4 @@ const AppComponent = (
 
 const rootElement = document.getElementById("root")!;
 
-// 在开发环境使用 createRoot，在生产环境使用 hydrateRoot 进行 SSR
-if (import.meta.env.DEV) {
-  ReactDOM.createRoot(rootElement).render(AppComponent);
-} else {
-  ReactDOM.hydrateRoot(rootElement, AppComponent);
-}
+ReactDOM.createRoot(rootElement).render(AppComponent);

@@ -13,7 +13,7 @@ export function FloatingPlayer() {
 
   const lyricLines = parseLrc(music.current.lyric);
   const activeLyric =
-    lyricLines.reduce((active, line) => (line.time <= music.currentTime + 0.25 ? line : active), lyricLines[0])?.text ||
+    lyricLines.reduce((active, line) => (line.time <= music.currentTime + 0.25 ? line : active), lyricLines[0])?.texts[0] ||
     music.current.lyric ||
     music.current.artist ||
     "暂无歌词";

@@ -110,6 +110,9 @@ export type AdminMusicTrack = {
   artist: string | null;
   album: string | null;
   cover: string | null;
+  playlistId: string | null;
+  playlistName: string | null;
+  playlistCover: string | null;
   lyric: string | null;
   cachedUrl: string | null;
   cacheExpiresAt: string | null;
@@ -128,6 +131,8 @@ export type ImportMusicPlaylistPayload = {
 
 export type ImportMusicPlaylistResult = {
   playlistId: string;
+  playlistName: string;
+  playlistCover: string | null;
   imported: number;
   skipped: number;
   total: number;

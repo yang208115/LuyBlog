@@ -1,4 +1,4 @@
-CREATE TABLE `nav_items` (
+CREATE TABLE IF NOT EXISTS `nav_items` (
   `id` text PRIMARY KEY NOT NULL,
   `label` text NOT NULL,
   `path` text NOT NULL,
@@ -8,9 +8,9 @@ CREATE TABLE `nav_items` (
   `updated_at` integer DEFAULT (strftime('%s', 'now')) NOT NULL
 );
 
-CREATE INDEX `nav_items_status_sort_idx` ON `nav_items` (`status`, `sort_order`);
+CREATE INDEX IF NOT EXISTS `nav_items_status_sort_idx` ON `nav_items` (`status`, `sort_order`);
 
-INSERT INTO `nav_items` (`id`, `label`, `path`, `sort_order`, `status`) VALUES
+INSERT OR IGNORE INTO `nav_items` (`id`, `label`, `path`, `sort_order`, `status`) VALUES
   ('nav_home', '首页', '/', 0, 'enabled'),
   ('nav_blog', '归档', '/blog', 10, 'enabled'),
   ('nav_search', '搜索', '/search', 20, 'enabled'),

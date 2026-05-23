@@ -7,6 +7,9 @@ export type Track = {
   artist: string | null;
   album: string | null;
   cover: string | null;
+  playlistId: string | null;
+  playlistName: string | null;
+  playlistCover: string | null;
   lyric: string | null;
   url: string | null;
   level: string;
@@ -20,6 +23,9 @@ const fallbackTracks: Track[] = [
     artist: "LuyBlog",
     album: null,
     cover: null,
+    playlistId: null,
+    playlistName: null,
+    playlistCover: null,
     lyric: "请在后台音乐栏目添加网易云歌曲 ID。",
     url: null,
     level: "exhigh",
@@ -38,6 +44,7 @@ type MusicContextValue = {
   toggle: () => void;
   next: () => void;
   select: (index: number) => void;
+  shuffleCurrent: () => void;
   refreshCurrent: () => Promise<void>;
   seek: (time: number) => void;
 };
@@ -59,6 +66,19 @@ async function refreshTrack(id: string): Promise<Track> {
   return response.json();
 }
 
+function randomIndex(length: number) {
+  return length > 1 ? Math.floor(Math.random() * length) : 0;
+}
+
+function shuffleTracks(items: Track[]) {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomIndex(index + 1);
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+}
+
 export function MusicProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const retryingRef = useRef(false);
@@ -77,7 +97,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     fetchTracks()
       .then((items) => {
         if (cancelled) return;
-        setTracks(items.length ? items : fallbackTracks);
+        const nextTracks = items.length ? shuffleTracks(items) : fallbackTracks;
+        setTracks(nextTracks);
         setIndex(0);
         setError(null);
       })
@@ -146,6 +167,18 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         setIndex(nextIndex);
         retryingRef.current = false;
       },
+      shuffleCurrent: () => {
+        if (tracks.length <= 1) return;
+        setTracks((items) => {
+          const next = shuffleTracks(items);
+          if (next[0]?.id === items[index]?.id) {
+            next.push(next.shift()!);
+          }
+          return next;
+        });
+        setIndex(0);
+        retryingRef.current = false;
+      },
       refreshCurrent,
       seek: (time) => {
         const audio = audioRef.current;
@@ -162,7 +195,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     if (!audio) return;
     audio.load();
     if (playing) void play();
-  }, [current.url, play, playing]);
+  }, [current.url]);
 
   const handleError = async () => {
     if (retryingRef.current || current.id === "fallback") {

@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { musicTracks } from "../db/schema";
@@ -43,6 +43,12 @@ type NeteaseLyricResponse = {
   lrc?: {
     lyric?: string;
   };
+  tlyric?: {
+    lyric?: string;
+  };
+  romalrc?: {
+    lyric?: string;
+  };
 };
 
 function toDto(row: typeof musicTracks.$inferSelect) {
@@ -53,6 +59,9 @@ function toDto(row: typeof musicTracks.$inferSelect) {
     artist: row.artist,
     album: row.album,
     cover: row.cover,
+    playlistId: row.playlistId,
+    playlistName: row.playlistName,
+    playlistCover: row.playlistCover,
     lyric: row.lyric,
     url: row.cachedUrl,
     cachedAt: row.cachedAt?.toISOString() ?? null,
@@ -117,7 +126,7 @@ async function resolveMusicLyric(neteaseId: string) {
   if (!response.ok) throw new Error(`歌词接口返回 ${response.status}`);
   const data = (await response.json()) as NeteaseLyricResponse;
   if (data.code !== 200) throw new Error("歌词接口未返回成功状态");
-  return data.lrc?.lyric || null;
+  return [data.lrc?.lyric, data.tlyric?.lyric, data.romalrc?.lyric].filter(Boolean).join("\n") || null;
 }
 
 async function ensureTrackUrl(db: DrizzleD1Database<typeof schema>, row: typeof musicTracks.$inferSelect, force = false) {
@@ -160,7 +169,7 @@ app.get("/tracks", async (c) => {
     .select()
     .from(musicTracks)
     .where(eq(musicTracks.status, "enabled"))
-    .orderBy(asc(musicTracks.sortOrder), asc(musicTracks.createdAt));
+    .orderBy(sql`random()`, asc(musicTracks.sortOrder), asc(musicTracks.createdAt));
 
   const resolved = await Promise.all(
     rows.map(async (row) => {

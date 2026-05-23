@@ -76,11 +76,41 @@ function Stat({ count, label, color }: { count: number; label: string; color: st
 export function CloudPlayerBento() {
   const music = useMusic();
   const theme = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (!music.loading) music.shuffleCurrent();
+  }, [mounted, music.loading]);
+
   const lyricLines = parseLrc(music.current.lyric);
   const activeLyric =
-    lyricLines.reduce((active, line) => (line.time <= music.currentTime + 0.25 ? line : active), lyricLines[0])?.text ||
+    lyricLines.reduce((active, line) => (line.time <= music.currentTime + 0.25 ? line : active), lyricLines[0])?.texts[0] ||
     (music.current.lyric ? "歌词加载中..." : "") ||
     "暂无歌词";
+
+  if (!mounted) {
+    return (
+      <Box sx={{ ...glassPanelSx, p: 3, minHeight: 278, display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative", overflow: "hidden" }}>
+        <Box sx={{ position: "relative", zIndex: 1 }}>
+          <Typography variant="overline" color="primary.main" sx={{ fontWeight: 900, letterSpacing: 2 }}>
+            Cloud Music
+          </Typography>
+          <Typography variant="h4" sx={{ fontWeight: 900, mt: 1, letterSpacing: "-0.02em" }}>
+            加载歌单中...
+          </Typography>
+          <Typography color="text.secondary" sx={{ mt: 0.5, fontWeight: 500 }}>
+            正在准备音乐
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ ...glassPanelSx, p: 3, minHeight: 278, display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative", overflow: "hidden" }}>
       {music.current.cover && (

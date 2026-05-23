@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { comments, friendLinks, moments, musicTracks, navItems, pages, posts, projects, users } from "../db/schema";
@@ -58,14 +58,24 @@ type NeteaseLyricResponse = {
   lrc?: {
     lyric?: string;
   };
+  tlyric?: {
+    lyric?: string;
+  };
+  romalrc?: {
+    lyric?: string;
+  };
 };
 
 type NeteasePlaylistResponse = {
   code?: number;
   result?: {
+    name?: string;
+    coverImgUrl?: string;
     tracks?: NeteasePlaylistTrack[];
   };
   playlist?: {
+    name?: string;
+    coverImgUrl?: string;
     tracks?: NeteasePlaylistTrack[];
   };
 };
@@ -117,7 +127,7 @@ async function resolveMusicLyric(neteaseId: string) {
   if (!response.ok) throw new Error(`歌词接口返回 ${response.status}`);
   const data = (await response.json()) as NeteaseLyricResponse;
   if (data.code !== 200) throw new Error("歌词接口未返回成功状态");
-  return data.lrc?.lyric || null;
+  return [data.lrc?.lyric, data.tlyric?.lyric, data.romalrc?.lyric].filter(Boolean).join("\n") || null;
 }
 
 function extractPlaylistId(value: string) {
@@ -126,15 +136,21 @@ function extractPlaylistId(value: string) {
   return match?.[1] ?? null;
 }
 
-async function resolvePlaylistTracks(playlistId: string) {
+async function resolvePlaylist(playlistId: string) {
   const response = await fetch(`https://music.163.com/api/playlist/detail?id=${encodeURIComponent(playlistId)}`, {
     headers: { accept: "application/json", "user-agent": "LuyBlog/1.0" },
   });
   if (!response.ok) throw new Error(`歌单接口返回 ${response.status}`);
   const data = (await response.json()) as NeteasePlaylistResponse;
-  const tracks = data.result?.tracks ?? data.playlist?.tracks ?? [];
+  const playlist = data.result ?? data.playlist;
+  const tracks = playlist?.tracks ?? [];
   if (data.code !== 200 || tracks.length === 0) throw new Error("歌单接口未返回歌曲信息");
-  return tracks;
+  return {
+    id: playlistId,
+    name: playlist?.name || `网易云歌单 ${playlistId}`,
+    cover: playlist?.coverImgUrl ?? null,
+    tracks,
+  };
 }
 
 function playlistTrackToMusicTrack(track: NeteasePlaylistTrack) {
@@ -795,9 +811,8 @@ app.post("/music-tracks/import-playlist", async (c) => {
   if (!playlistId) return c.json({ code: 400, message: "请输入网易云歌单 ID 或链接" }, 400);
 
   try {
-    const tracks = (await resolvePlaylistTracks(playlistId))
-      .map(playlistTrackToMusicTrack)
-      .filter((track) => /^\d+$/.test(track.neteaseId));
+    const playlist = await resolvePlaylist(playlistId);
+    const tracks = playlist.tracks.map(playlistTrackToMusicTrack).filter((track) => /^\d+$/.test(track.neteaseId));
     if (tracks.length === 0) return c.json({ code: 400, message: "歌单中没有可导入的歌曲" }, 400);
 
     const existing = await db.select({ neteaseId: musicTracks.neteaseId, sortOrder: musicTracks.sortOrder }).from(musicTracks);
@@ -811,6 +826,15 @@ app.post("/music-tracks/import-playlist", async (c) => {
     for (const track of tracks) {
       if (existingIds.has(track.neteaseId)) {
         skipped += 1;
+        await db
+          .update(musicTracks)
+          .set({
+            playlistId: playlist.id,
+            playlistName: playlist.name,
+            playlistCover: playlist.cover,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(musicTracks.neteaseId, track.neteaseId), isNull(musicTracks.playlistId)));
         continue;
       }
       const [created] = await db
@@ -821,6 +845,9 @@ app.post("/music-tracks/import-playlist", async (c) => {
           artist: track.artist,
           album: track.album,
           cover: track.cover,
+          playlistId: playlist.id,
+          playlistName: playlist.name,
+          playlistCover: playlist.cover,
           level: parsed.data.level,
           sortOrder,
           status: parsed.data.status,
@@ -834,6 +861,8 @@ app.post("/music-tracks/import-playlist", async (c) => {
 
     return c.json({
       playlistId,
+      playlistName: playlist.name,
+      playlistCover: playlist.cover,
       imported: imported.length,
       skipped,
       total: tracks.length,

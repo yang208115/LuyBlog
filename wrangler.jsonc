@@ -25,6 +25,7 @@
 	},
 	"env": {
 		"production": {
+			"name": "luy-blog",
 			"assets": {
 				"binding": "ASSETS",
 				"directory": "./dist/client"
@@ -41,7 +42,7 @@
 				"NODE_ENV": "production",
 				"VITE_PORT": "5173",
 				"APP_BASE_URL": "https://blog.lyuy.top"
-			},"name": "luy-blog"
+			}
 		}
 	}
 }

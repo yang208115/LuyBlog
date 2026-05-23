@@ -128,7 +128,7 @@ export const CreateMusicTrackSchema = z.object({
   artist: z.string().trim().max(200).nullable().optional(),
   album: z.string().trim().max(200).nullable().optional(),
   cover: z.string().trim().max(1000).nullable().optional(),
-  lyric: z.string().trim().max(2000).nullable().optional(),
+  lyric: z.string().trim().max(50000).nullable().optional(),
   level: z.string().trim().min(1).max(40).default("exhigh"),
   sortOrder: z.number().int().min(0).max(9999).default(0),
   status: z.enum(["enabled", "disabled"]).default("enabled"),
