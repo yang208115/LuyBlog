@@ -2,9 +2,11 @@
 
 LuyBlog 是我给自己写的个人博客系统，运行在 Cloudflare Workers + D1 上。它不是一个纯静态博客，而是带完整后台的内容管理应用：文章、页面、瞬间、项目、友链、音乐、评论、站点配置和导航栏都可以在后台维护。
 
+> **致谢与声明**：本项目是基于 [XinghuisamaBlogs](https://github.com/heiehiehi/XinghuisamaBlogs) 进行的二次开发。感谢原作者的开源贡献！
+
 这个项目的目标很简单：把个人站点需要的东西尽量收在一个轻量、可部署、可维护的代码仓库里。
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-blue.svg)](./LICENSE)
 
 ## 主要功能
 
@@ -192,4 +194,11 @@ src/services        # 服务逻辑
 
 ## License
 
-[MIT](./LICENSE)
+本项目基于 [XinghuisamaBlogs](https://github.com/heiehiehi/XinghuisamaBlogs) 进行二次开发，遵循原项目的开源协议。
+
+本项目采用 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hans)（署名-非商业性使用 4.0 国际）协议进行许可。
+
+**二次开发与分发要求：**
+- **署名（Attribution）**：必须提及原作者（[heiehiehi](https://github.com/heiehiehi)），提供指向原项目 [XinghuisamaBlogs](https://github.com/heiehiehi/XinghuisamaBlogs) 的链接，并标明是否对原代码进行了修改。
+- **非商业性使用（NonCommercial）**：不得将本代码及其衍生作品用于商业目的。
+- **相同方式共享（ShareAlike 精神延伸）**：基于本项目进行的二次开发，也必须采用相同的 CC BY-NC 4.0 协议进行开源发布。

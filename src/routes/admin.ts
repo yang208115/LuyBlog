@@ -80,6 +80,13 @@ type NeteasePlaylistResponse = {
   };
 };
 
+type PlaylistResolution = {
+  id: string;
+  name: string;
+  cover: string | null;
+  tracks: NeteasePlaylistTrack[];
+};
+
 type NeteasePlaylistTrack = {
   id?: number | string;
   name?: string;
@@ -137,14 +144,34 @@ function extractPlaylistId(value: string) {
 }
 
 async function resolvePlaylist(playlistId: string) {
-  const response = await fetch(`https://music.163.com/api/playlist/detail?id=${encodeURIComponent(playlistId)}`, {
+  const endpoints = [
+    `https://music.163.com/api/playlist/detail?id=${encodeURIComponent(playlistId)}`,
+    `https://music163.xuanmou.com.cn/playlist/detail?id=${encodeURIComponent(playlistId)}`,
+  ];
+  const errors: string[] = [];
+
+  for (const endpoint of endpoints) {
+    try {
+      const playlist = await fetchPlaylist(endpoint, playlistId);
+      if (playlist.tracks.length > 0) return playlist;
+      errors.push("歌单接口未返回歌曲信息");
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "歌单接口请求失败");
+    }
+  }
+
+  throw new Error(errors.at(-1) ?? "歌单接口未返回歌曲信息");
+}
+
+async function fetchPlaylist(endpoint: string, playlistId: string): Promise<PlaylistResolution> {
+  const response = await fetch(endpoint, {
     headers: { accept: "application/json", "user-agent": "LuyBlog/1.0" },
   });
   if (!response.ok) throw new Error(`歌单接口返回 ${response.status}`);
   const data = (await response.json()) as NeteasePlaylistResponse;
   const playlist = data.result ?? data.playlist;
   const tracks = playlist?.tracks ?? [];
-  if (data.code !== 200 || tracks.length === 0) throw new Error("歌单接口未返回歌曲信息");
+  if (data.code !== 200) throw new Error(`歌单接口返回状态 ${data.code ?? "未知"}`);
   return {
     id: playlistId,
     name: playlist?.name || `网易云歌单 ${playlistId}`,
@@ -810,8 +837,16 @@ app.post("/music-tracks/import-playlist", async (c) => {
   const playlistId = extractPlaylistId(parsed.data.playlist);
   if (!playlistId) return c.json({ code: 400, message: "请输入网易云歌单 ID 或链接" }, 400);
 
+  let playlist: PlaylistResolution;
   try {
-    const playlist = await resolvePlaylist(playlistId);
+    playlist = await resolvePlaylist(playlistId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "获取歌单失败";
+    console.error("[admin] import playlist resolve failed", { playlistId, error });
+    return c.json({ code: 502, message }, 502);
+  }
+
+  try {
     const tracks = playlist.tracks.map(playlistTrackToMusicTrack).filter((track) => /^\d+$/.test(track.neteaseId));
     if (tracks.length === 0) return c.json({ code: 400, message: "歌单中没有可导入的歌曲" }, 400);
 
@@ -870,7 +905,8 @@ app.post("/music-tracks/import-playlist", async (c) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "导入歌单失败";
-    return c.json({ code: 502, message }, 502);
+    console.error("[admin] import playlist persist failed", { playlistId, error });
+    return c.json({ code: 500, message: `保存歌单失败：${message}` }, 500);
   }
 });
 
