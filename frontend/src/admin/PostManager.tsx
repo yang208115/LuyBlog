@@ -95,7 +95,7 @@ export function PostManager() {
                   </TableCell>
                   <TableCell>
                     <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
-                      {post.category && <Chip size="small" label={post.category} variant="outlined" />}
+                      {post.category && <Chip size="small" label={post.category} color="primary" />}
                       {post.tags.map((tag) => (
                         <Chip key={tag} size="small" label={tag} />
                       ))}

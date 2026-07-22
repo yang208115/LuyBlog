@@ -201,6 +201,17 @@ app.get("/posts", async (c) => {
   });
 });
 
+app.get("/post-taxonomy", async (c) => {
+  const rows = await c.get("db").select({ category: posts.category, tags: posts.tags }).from(posts);
+  const categories = [...new Set(rows.map((row) => row.category?.trim()).filter((item): item is string => Boolean(item)))].sort(
+    (a, b) => a.localeCompare(b, "zh-CN"),
+  );
+  const tags = [...new Set(rows.flatMap((row) => parseJsonArray(row.tags)).map((tag) => tag.trim()).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, "zh-CN"),
+  );
+  return c.json({ categories, tags });
+});
+
 app.post("/posts", async (c) => {
   const db = c.get("db");
   const currentUser = c.get("user");

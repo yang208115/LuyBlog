@@ -2,7 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import type { Bindings } from "../types";
-import { chatCompletionsUrl } from "../services/ai";
+import { chatWithConfig } from "../services/ai";
 import { getSiteConfig } from "./siteConfig";
 import { authMiddleware } from "../middleware/auth";
 import { adminMiddleware } from "../middleware/admin";
@@ -21,42 +21,28 @@ app.get("/test", (c) => c.text("喵！我能通！"));
 protectedRoutes.post("/chat", async (c) => {
   const config = await getSiteConfig(c.get("db"));
   const aiConfig = config.aiConfig;
-  const key = aiConfig.apiKey.trim();
-  if (!key) {
-    return c.json({ code: 503, message: "AI 密钥未配置" }, 503);
-  }
 
   const body = (await c.req.json().catch(() => ({}))) as { message?: string; messages?: Array<{ role: string; content: string }> };
-  const message = body.message ?? body.messages?.at(-1)?.content;
-  if (!message?.trim() || message.length > 4000) {
+  const rawMessages = body.messages?.length
+    ? body.messages
+    : body.message
+      ? [{ role: "user", content: body.message }]
+      : [];
+  const messages = rawMessages
+    .slice(-20)
+    .filter((item): item is { role: "user" | "assistant"; content: string } =>
+      (item.role === "user" || item.role === "assistant") && typeof item.content === "string",
+    );
+  if (!messages.length || messages.some((item) => !item.content.trim() || item.content.length > 4000)) {
     return c.json({ code: 400, message: "message 不能为空" }, 400);
   }
 
   try {
-    const aiModel = aiConfig.model;
-    const aiPrompt = aiConfig.systemPrompt;
-    const maxTokens = aiConfig.maxTokens;
-    const temperature = aiConfig.temperature;
-
-    const res = await fetch(chatCompletionsUrl(aiConfig.baseUrl), {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: aiModel,
-        messages: [
-          { role: "system", content: aiPrompt },
-          { role: "user", content: message },
-        ],
-        max_tokens: maxTokens,
-        temperature,
-      }),
-    });
-    if (!res.ok) return c.json({ code: res.status, message: "AI 上游请求失败" }, 502);
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const text = data.choices?.[0]?.message?.content ?? "";
+    const text = await chatWithConfig(aiConfig, messages);
     return c.json({ reply: text, message: text });
-  } catch {
-    return c.json({ code: 502, message: "AI 请求失败" }, 502);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "AI 请求失败";
+    return c.json({ code: 502, message }, 502);
   }
 });
 

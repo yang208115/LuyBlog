@@ -63,8 +63,9 @@ export function BlogDetailPage() {
               <Typography variant="body2">{post.viewCount} 次浏览</Typography>
             </Stack>
           </Stack>
-          {tags.length > 0 && (
+          {(post.category || tags.length > 0) && (
             <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
+              {post.category && <Chip label={post.category} size="small" color="primary" />}
               {tags.map((tag) => (
                 <Chip key={tag} label={tag} size="small" variant="outlined" />
               ))}

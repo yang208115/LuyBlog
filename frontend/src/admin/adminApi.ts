@@ -34,6 +34,35 @@ export type AdminPost = {
   updatedAt: string;
 };
 
+export type PostTaxonomy = {
+  categories: string[];
+  tags: string[];
+};
+
+export type AiChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type AiPostContext = {
+  title: string;
+  slug: string;
+  summary: string;
+  category: string;
+  tags: string[];
+  contentMd: string;
+};
+
+export type AiCompletionField = "titles" | "slug" | "summary" | "category" | "tags";
+
+export type AiCompletePostResponse = {
+  titles?: string[];
+  slug?: string;
+  summary?: string;
+  category?: string;
+  tags?: string[];
+};
+
 export type AdminMoment = {
   id: string;
   slug: string;
@@ -138,6 +167,7 @@ export const adminApi = {
   siteConfig: () => request<SiteConfig>("/api/admin/site-config"),
   updateSiteConfig: (body: SiteConfig) => request<SiteConfig>("/api/admin/site-config", json("PUT", body)),
   posts: () => request<ListResponse<AdminPost>>("/api/admin/posts?page=1&pageSize=100"),
+  postTaxonomy: () => request<PostTaxonomy>("/api/admin/post-taxonomy"),
   post: async (id: string) => {
     const data = await request<ListResponse<AdminPost>>("/api/admin/posts?page=1&pageSize=100");
     const post = data.items.find((item) => item.id === id);
@@ -147,6 +177,10 @@ export const adminApi = {
   createPost: (body: Omit<AdminPost, "id" | "publishedAt" | "updatedAt" | "viewCount">) => request<AdminPost>("/api/admin/posts", json("POST", body)),
   updatePost: (id: string, body: Partial<Omit<AdminPost, "id" | "publishedAt" | "updatedAt" | "viewCount">>) => request<AdminPost>(`/api/admin/posts/${id}`, json("PATCH", body)),
   deletePost: (id: string) => request<{ success: true }>(`/api/admin/posts/${id}`, { method: "DELETE" }),
+  aiChat: (messages: AiChatMessage[], context: AiPostContext) =>
+    request<{ reply: string }>("/api/ai/chat", json("POST", { messages, context })),
+  completePost: (fields: AiCompletionField[], context: AiPostContext, postId?: string) =>
+    request<AiCompletePostResponse>("/api/ai/complete-post", json("POST", { fields, context, postId })),
   moments: () => request<ListResponse<AdminMoment>>("/api/admin/moments"),
   createMoment: (body: Omit<AdminMoment, "id" | "publishedAt" | "updatedAt">) => request<AdminMoment>("/api/admin/moments", json("POST", body)),
   updateMoment: (id: string, body: Partial<Omit<AdminMoment, "id" | "publishedAt" | "updatedAt">>) => request<AdminMoment>(`/api/admin/moments/${id}`, json("PATCH", body)),

@@ -264,7 +264,7 @@ export function BlogListPage() {
 
                             <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" useFlexGap flexWrap="wrap">
                               <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
-                                {post.category && <Chip size="small" label={post.category} variant="outlined" />}
+                                {post.category && <Chip size="small" label={post.category} color="primary" />}
                                 {postTags.map((tag) => (
                                   <Chip
                                     key={tag}
