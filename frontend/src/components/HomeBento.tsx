@@ -1,10 +1,10 @@
 import { Avatar, Box, ButtonBase, Chip, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { GitHub, MailRounded, PauseRounded, PlayArrowRounded, RefreshRounded, SkipNextRounded } from "@mui/icons-material";
+import { GitHub, MailRounded, PauseRounded, PlayArrowRounded, SkipNextRounded } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { glassPanelSx } from "./Glass";
-import { parseLrc } from "./LyricsView";
+import { calculateLineProgress, findActiveLineIndex, KaraokeText, parseLrc } from "./LyricsView";
 import { useMusic } from "../context/MusicProvider";
 import type { PostItem } from "../services/content";
 import { useAppTheme } from "../context/ThemeContextProvider";
@@ -82,16 +82,15 @@ export function CloudPlayerBento() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!mounted) return;
-    if (!music.loading) music.shuffleCurrent();
-  }, [mounted, music.loading]);
-
   const lyricLines = parseLrc(music.current.lyric);
+  const activeLyricIndex = findActiveLineIndex(lyricLines, music.currentTime);
   const activeLyric =
-    lyricLines.reduce((active, line) => (line.time <= music.currentTime + 0.25 ? line : active), lyricLines[0])?.texts[0] ||
+    lyricLines[activeLyricIndex]?.texts[0] ||
     (music.current.lyric ? "歌词加载中..." : "") ||
     "暂无歌词";
+  const activeLyricProgress = activeLyricIndex >= 0
+    ? calculateLineProgress(lyricLines, activeLyricIndex, music.currentTime)
+    : undefined;
 
   if (!mounted) {
     return (
@@ -143,18 +142,15 @@ export function CloudPlayerBento() {
           {music.current.title}
         </Typography>
         <Typography color="text.secondary" sx={{ mt: 0.5, fontWeight: 500 }}>
-          {music.loading ? "加载歌单中..." : music.current.artist || `网易云 ID: ${music.current.neteaseId || "未配置"}`}
+          {music.loading ? "加载音乐中..." : music.current.artist || "未知歌手"}
         </Typography>
       </Box>
       <Box sx={{ p: 2, borderRadius: 3, bgcolor: alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.3 : 0.05), color: "text.primary", position: "relative", zIndex: 1 }}>
         <Typography sx={{ fontWeight: 700, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-          {music.error || activeLyric}
+          {music.error || <KaraokeText text={activeLyric} progress={activeLyricProgress} />}
         </Typography>
       </Box>
       <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" sx={{ position: "relative", zIndex: 1 }}>
-        <IconButton onClick={() => void music.refreshCurrent()} sx={{ bgcolor: alpha(theme.palette.text.primary, 0.05), color: "text.primary" }}>
-          <RefreshRounded />
-        </IconButton>
         <IconButton
           onClick={music.toggle}
           sx={{

@@ -2,33 +2,23 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 
 export type Track = {
   id: string;
-  neteaseId: string;
   title: string;
   artist: string | null;
   album: string | null;
   cover: string | null;
-  playlistId: string | null;
-  playlistName: string | null;
-  playlistCover: string | null;
   lyric: string | null;
-  url: string | null;
-  level: string;
+  url: string;
 };
 
 const fallbackTracks: Track[] = [
   {
     id: "fallback",
-    neteaseId: "",
-    title: "未配置歌单",
+    title: "未配置音乐",
     artist: "LuyBlog",
     album: null,
     cover: null,
-    playlistId: null,
-    playlistName: null,
-    playlistCover: null,
-    lyric: "请在后台音乐栏目添加网易云歌曲 ID。",
-    url: null,
-    level: "exhigh",
+    lyric: "请在后台音乐栏目填写音乐链接和歌词。",
+    url: "",
   },
 ];
 
@@ -44,8 +34,6 @@ type MusicContextValue = {
   toggle: () => void;
   next: () => void;
   select: (index: number) => void;
-  shuffleCurrent: () => void;
-  refreshCurrent: () => Promise<void>;
   seek: (time: number) => void;
 };
 
@@ -54,15 +42,6 @@ const MusicContext = createContext<MusicContextValue | null>(null);
 async function fetchTracks(): Promise<Track[]> {
   const response = await fetch("/api/music/tracks");
   if (!response.ok) throw new Error("加载歌单失败");
-  return response.json();
-}
-
-async function refreshTrack(id: string): Promise<Track> {
-  const response = await fetch(`/api/music/tracks/${id}/refresh`, { method: "POST" });
-  if (!response.ok) {
-    const data = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(data?.message || "刷新歌曲 URL 失败");
-  }
   return response.json();
 }
 
@@ -81,7 +60,6 @@ function shuffleTracks(items: Track[]) {
 
 export function MusicProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const retryingRef = useRef(false);
   const [tracks, setTracks] = useState<Track[]>(fallbackTracks);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -112,16 +90,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
-
-  const replaceCurrentTrack = useCallback((track: Track) => {
-    setTracks((items) => items.map((item) => (item.id === track.id ? track : item)));
-  }, []);
-
-  const refreshCurrent = useCallback(async () => {
-    if (!current.id || current.id === "fallback") return;
-    const updated = await refreshTrack(current.id);
-    replaceCurrentTrack(updated);
-  }, [current.id, replaceCurrentTrack]);
 
   const play = useCallback(async () => {
     const audio = audioRef.current;
@@ -160,26 +128,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         }
       },
       next: () => {
+        setCurrentTime(0);
+        setDuration(0);
         setIndex((value) => (value + 1) % tracks.length);
-        retryingRef.current = false;
       },
       select: (nextIndex) => {
+        setCurrentTime(0);
+        setDuration(0);
         setIndex(nextIndex);
-        retryingRef.current = false;
       },
-      shuffleCurrent: () => {
-        if (tracks.length <= 1) return;
-        setTracks((items) => {
-          const next = shuffleTracks(items);
-          if (next[0]?.id === items[index]?.id) {
-            next.push(next.shift()!);
-          }
-          return next;
-        });
-        setIndex(0);
-        retryingRef.current = false;
-      },
-      refreshCurrent,
       seek: (time) => {
         const audio = audioRef.current;
         if (!audio) return;
@@ -187,7 +144,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         setCurrentTime(time);
       },
     }),
-    [current, currentTime, duration, error, index, loading, play, playing, refreshCurrent, tracks],
+    [current, currentTime, duration, error, index, loading, play, playing, tracks],
   );
 
   useEffect(() => {
@@ -197,30 +154,16 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     if (playing) void play();
   }, [current.url]);
 
-  const handleError = async () => {
-    if (retryingRef.current || current.id === "fallback") {
-      setPlaying(false);
-      setError("播放失败，歌曲 URL 刷新后仍不可用");
-      return;
-    }
-    retryingRef.current = true;
-    try {
-      const updated = await refreshTrack(current.id);
-      replaceCurrentTrack(updated);
-      window.setTimeout(() => void play(), 100);
-    } catch (err) {
-      setPlaying(false);
-      setError(err instanceof Error ? err.message : "刷新歌曲 URL 失败");
-    }
-  };
-
   return (
     <MusicContext.Provider value={value}>
       <audio
         ref={audioRef}
-        src={current.url ?? undefined}
+        src={current.url || undefined}
         onEnded={value.next}
-        onError={() => void handleError()}
+        onError={() => {
+          setPlaying(false);
+          setError("播放失败，请检查音乐链接是否有效且允许跨域访问");
+        }}
         onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
         onLoadedMetadata={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
         preload="none"

@@ -24,7 +24,7 @@ const subtitles: Record<AdminSection, string> = {
   projects: "维护项目列表和展示顺序",
   pages: "编辑关于等 Markdown 页面",
   friends: "管理友链站点和展示状态",
-  music: "配置网易云歌曲和缓存播放链接",
+  music: "配置音乐链接和手动歌词",
   comments: "审核文章评论可见状态",
   users: "管理用户角色和账号状态",
 };

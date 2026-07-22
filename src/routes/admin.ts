@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { comments, friendLinks, moments, musicTracks, navItems, pages, posts, projects, users } from "../db/schema";
@@ -11,7 +11,6 @@ import {
   CreatePageSchema,
   CreatePostSchema,
   CreateProjectSchema,
-  ImportMusicPlaylistSchema,
   ReorderNavItemsSchema,
   UpdateCommentStatusSchema,
   UpdateFriendLinkSchema,
@@ -38,159 +37,6 @@ type Variables = {
 
 const app = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
 app.use("/*", authMiddleware, adminMiddleware);
-
-type NeteaseUrlResponse = {
-  code?: number;
-  data?: Array<{ url?: string | null; code?: number; expi?: number }>;
-};
-
-type NeteaseDetailResponse = {
-  code?: number;
-  songs?: Array<{
-    name?: string;
-    ar?: Array<{ name?: string }>;
-    al?: { name?: string; picUrl?: string };
-  }>;
-};
-
-type NeteaseLyricResponse = {
-  code?: number;
-  lrc?: {
-    lyric?: string;
-  };
-  tlyric?: {
-    lyric?: string;
-  };
-  romalrc?: {
-    lyric?: string;
-  };
-};
-
-type NeteasePlaylistResponse = {
-  code?: number;
-  result?: {
-    name?: string;
-    coverImgUrl?: string;
-    tracks?: NeteasePlaylistTrack[];
-  };
-  playlist?: {
-    name?: string;
-    coverImgUrl?: string;
-    tracks?: NeteasePlaylistTrack[];
-  };
-};
-
-type PlaylistResolution = {
-  id: string;
-  name: string;
-  cover: string | null;
-  tracks: NeteasePlaylistTrack[];
-};
-
-type NeteasePlaylistTrack = {
-  id?: number | string;
-  name?: string;
-  artists?: Array<{ name?: string }>;
-  ar?: Array<{ name?: string }>;
-  album?: { name?: string; picUrl?: string; blurPicUrl?: string };
-  al?: { name?: string; picUrl?: string };
-};
-
-async function resolveMusicUrl(neteaseId: string, level: string) {
-  const response = await fetch(
-    `https://music163.xuanmou.com.cn/song/url/v1?id=${encodeURIComponent(neteaseId)}&level=${encodeURIComponent(level)}`,
-    { headers: { accept: "application/json", "user-agent": "LuyBlog/1.0" } },
-  );
-  if (!response.ok) throw new Error(`音乐接口返回 ${response.status}`);
-  const data = (await response.json()) as NeteaseUrlResponse;
-  const first = data.data?.[0];
-  if (data.code !== 200 || first?.code !== 200 || !first.url) throw new Error("音乐接口未返回可播放 URL");
-  return {
-    url: first.url,
-    expiresAt: new Date(Date.now() + Math.max(60, Number(first.expi ?? 1200)) * 1000),
-  };
-}
-
-async function resolveMusicDetail(neteaseId: string) {
-  const response = await fetch(`https://music163.xuanmou.com.cn/song/detail?ids=${encodeURIComponent(neteaseId)}`, {
-    headers: { accept: "application/json", "user-agent": "LuyBlog/1.0" },
-  });
-  if (!response.ok) throw new Error(`歌曲详情接口返回 ${response.status}`);
-  const data = (await response.json()) as NeteaseDetailResponse;
-  const song = data.songs?.[0];
-  if (data.code !== 200 || !song) throw new Error("歌曲详情接口未返回歌曲信息");
-  return {
-    title: song.name ?? null,
-    artist: song.ar?.map((artist) => artist.name).filter(Boolean).join(" / ") || null,
-    album: song.al?.name ?? null,
-    cover: song.al?.picUrl ?? null,
-  };
-}
-
-async function resolveMusicLyric(neteaseId: string) {
-  const response = await fetch(`https://music163.xuanmou.com.cn/lyric?id=${encodeURIComponent(neteaseId)}`, {
-    headers: { accept: "application/json", "user-agent": "LuyBlog/1.0" },
-  });
-  if (!response.ok) throw new Error(`歌词接口返回 ${response.status}`);
-  const data = (await response.json()) as NeteaseLyricResponse;
-  if (data.code !== 200) throw new Error("歌词接口未返回成功状态");
-  return [data.lrc?.lyric, data.tlyric?.lyric, data.romalrc?.lyric].filter(Boolean).join("\n") || null;
-}
-
-function extractPlaylistId(value: string) {
-  const trimmed = value.trim();
-  const match = trimmed.match(/[?&]id=(\d+)/) ?? trimmed.match(/playlist\/(?:detail\/)?(\d+)/) ?? trimmed.match(/^(\d+)$/);
-  return match?.[1] ?? null;
-}
-
-async function resolvePlaylist(playlistId: string) {
-  const endpoints = [
-    `https://music.163.com/api/playlist/detail?id=${encodeURIComponent(playlistId)}`,
-    `https://music163.xuanmou.com.cn/playlist/detail?id=${encodeURIComponent(playlistId)}`,
-  ];
-  const errors: string[] = [];
-
-  for (const endpoint of endpoints) {
-    try {
-      const playlist = await fetchPlaylist(endpoint, playlistId);
-      if (playlist.tracks.length > 0) return playlist;
-      errors.push("歌单接口未返回歌曲信息");
-    } catch (error) {
-      errors.push(error instanceof Error ? error.message : "歌单接口请求失败");
-    }
-  }
-
-  throw new Error(errors.at(-1) ?? "歌单接口未返回歌曲信息");
-}
-
-async function fetchPlaylist(endpoint: string, playlistId: string): Promise<PlaylistResolution> {
-  const response = await fetch(endpoint, {
-    headers: { accept: "application/json", "user-agent": "LuyBlog/1.0" },
-  });
-  if (!response.ok) throw new Error(`歌单接口返回 ${response.status}`);
-  const data = (await response.json()) as NeteasePlaylistResponse;
-  const playlist = data.result ?? data.playlist;
-  const tracks = playlist?.tracks ?? [];
-  if (data.code !== 200) throw new Error(`歌单接口返回状态 ${data.code ?? "未知"}`);
-  return {
-    id: playlistId,
-    name: playlist?.name || `网易云歌单 ${playlistId}`,
-    cover: playlist?.coverImgUrl ?? null,
-    tracks,
-  };
-}
-
-function playlistTrackToMusicTrack(track: NeteasePlaylistTrack) {
-  const neteaseId = track.id ? String(track.id) : "";
-  const artists = track.artists ?? track.ar ?? [];
-  return {
-    neteaseId,
-    title: track.name || neteaseId,
-    artist: artists.map((artist) => artist.name).filter(Boolean).join(" / ") || null,
-    album: track.album?.name ?? track.al?.name ?? null,
-    cover: track.album?.picUrl ?? track.album?.blurPicUrl ?? track.al?.picUrl ?? null,
-  };
-}
 
 function jsonArray(values: string[]) {
   return JSON.stringify(values);
@@ -771,8 +617,6 @@ app.get("/music-tracks", async (c) => {
   return c.json({
     items: rows.map((row) => ({
       ...row,
-      cachedAt: row.cachedAt?.toISOString() ?? null,
-      cacheExpiresAt: row.cacheExpiresAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     })),
@@ -784,130 +628,14 @@ app.post("/music-tracks", async (c) => {
   const parsed = CreateMusicTrackSchema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ code: 400, message: "歌曲参数不合法" }, 400);
 
-  const exists = await db.select({ id: musicTracks.id }).from(musicTracks).where(eq(musicTracks.neteaseId, parsed.data.neteaseId)).get();
-  if (exists) return c.json({ code: 400, message: "歌曲 ID 已存在" }, 400);
-
-  let cachedUrl: string | null = null;
-  let cacheExpiresAt: Date | null = null;
-  let cachedAt: Date | null = null;
-  let detail: Awaited<ReturnType<typeof resolveMusicDetail>> | null = null;
-  let lyric: string | null = null;
-  try {
-    detail = await resolveMusicDetail(parsed.data.neteaseId);
-  } catch {
-    // 详情接口失败时仍允许保存手动填写的歌曲信息。
-  }
-  try {
-    lyric = await resolveMusicLyric(parsed.data.neteaseId);
-  } catch {
-    // 歌词接口失败时保留手动填写。
-  }
-  try {
-    const resolved = await resolveMusicUrl(parsed.data.neteaseId, parsed.data.level);
-    cachedUrl = resolved.url;
-    cacheExpiresAt = resolved.expiresAt;
-    cachedAt = new Date();
-  } catch {
-    // 保存配置，后续播放或手动刷新时再获取。
-  }
-
   const [created] = await db
     .insert(musicTracks)
     .values({
       ...parsed.data,
-      title: parsed.data.title || detail?.title || parsed.data.neteaseId,
-      artist: parsed.data.artist ?? detail?.artist ?? null,
-      album: parsed.data.album ?? detail?.album ?? null,
-      cover: parsed.data.cover ?? detail?.cover ?? null,
-      lyric: parsed.data.lyric ?? lyric,
-      cachedUrl,
-      cachedAt,
-      cacheExpiresAt,
       updatedAt: new Date(),
     })
     .returning();
   return c.json(created);
-});
-
-app.post("/music-tracks/import-playlist", async (c) => {
-  const db = c.get("db");
-  const parsed = ImportMusicPlaylistSchema.safeParse(await c.req.json());
-  if (!parsed.success) return c.json({ code: 400, message: "歌单参数不合法" }, 400);
-
-  const playlistId = extractPlaylistId(parsed.data.playlist);
-  if (!playlistId) return c.json({ code: 400, message: "请输入网易云歌单 ID 或链接" }, 400);
-
-  let playlist: PlaylistResolution;
-  try {
-    playlist = await resolvePlaylist(playlistId);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "获取歌单失败";
-    console.error("[admin] import playlist resolve failed", { playlistId, error });
-    return c.json({ code: 502, message }, 502);
-  }
-
-  try {
-    const tracks = playlist.tracks.map(playlistTrackToMusicTrack).filter((track) => /^\d+$/.test(track.neteaseId));
-    if (tracks.length === 0) return c.json({ code: 400, message: "歌单中没有可导入的歌曲" }, 400);
-
-    const existing = await db.select({ neteaseId: musicTracks.neteaseId, sortOrder: musicTracks.sortOrder }).from(musicTracks);
-    const existingIds = new Set(existing.map((item) => item.neteaseId));
-    const imported = [];
-    let skipped = 0;
-    let sortOrder =
-      parsed.data.startSortOrder ??
-      Math.max(0, ...existing.map((item) => item.sortOrder)) + 1;
-
-    for (const track of tracks) {
-      if (existingIds.has(track.neteaseId)) {
-        skipped += 1;
-        await db
-          .update(musicTracks)
-          .set({
-            playlistId: playlist.id,
-            playlistName: playlist.name,
-            playlistCover: playlist.cover,
-            updatedAt: new Date(),
-          })
-          .where(and(eq(musicTracks.neteaseId, track.neteaseId), isNull(musicTracks.playlistId)));
-        continue;
-      }
-      const [created] = await db
-        .insert(musicTracks)
-        .values({
-          neteaseId: track.neteaseId,
-          title: track.title,
-          artist: track.artist,
-          album: track.album,
-          cover: track.cover,
-          playlistId: playlist.id,
-          playlistName: playlist.name,
-          playlistCover: playlist.cover,
-          level: parsed.data.level,
-          sortOrder,
-          status: parsed.data.status,
-          updatedAt: new Date(),
-        })
-        .returning();
-      imported.push(created);
-      existingIds.add(track.neteaseId);
-      sortOrder += 1;
-    }
-
-    return c.json({
-      playlistId,
-      playlistName: playlist.name,
-      playlistCover: playlist.cover,
-      imported: imported.length,
-      skipped,
-      total: tracks.length,
-      items: imported,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "导入歌单失败";
-    console.error("[admin] import playlist persist failed", { playlistId, error });
-    return c.json({ code: 500, message: `保存歌单失败：${message}` }, 500);
-  }
 });
 
 app.patch("/music-tracks/:id", async (c) => {
@@ -919,79 +647,15 @@ app.patch("/music-tracks/:id", async (c) => {
   const existing = await db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
   if (!existing) return c.json({ code: 404, message: "歌曲不存在" }, 404);
 
-  let detail: Awaited<ReturnType<typeof resolveMusicDetail>> | null = null;
-  let lyric: string | null = null;
-  const nextNeteaseId = parsed.data.neteaseId ?? existing.neteaseId;
-  if (parsed.data.neteaseId && parsed.data.neteaseId !== existing.neteaseId) {
-    try {
-      detail = await resolveMusicDetail(parsed.data.neteaseId);
-    } catch {
-      // 保留手动输入。
-    }
-    try {
-      lyric = await resolveMusicLyric(parsed.data.neteaseId);
-    } catch {
-      // 保留手动输入。
-    }
-  }
-
   const [updated] = await db
     .update(musicTracks)
     .set({
       ...parsed.data,
-      title: parsed.data.title ?? detail?.title ?? existing.title,
-      artist: parsed.data.artist !== undefined ? parsed.data.artist : detail?.artist ?? existing.artist,
-      album: parsed.data.album !== undefined ? parsed.data.album : detail?.album ?? existing.album,
-      cover: parsed.data.cover !== undefined ? parsed.data.cover : detail?.cover ?? existing.cover,
-      lyric: parsed.data.lyric !== undefined ? parsed.data.lyric : lyric ?? existing.lyric,
-      neteaseId: nextNeteaseId,
       updatedAt: new Date(),
     })
     .where(eq(musicTracks.id, id))
     .returning();
   return c.json(updated);
-});
-
-app.post("/music-tracks/:id/refresh", async (c) => {
-  const db = c.get("db");
-  const id = c.req.param("id");
-  const existing = await db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
-  if (!existing) return c.json({ code: 404, message: "歌曲不存在" }, 404);
-
-  try {
-    let detail: Awaited<ReturnType<typeof resolveMusicDetail>> | null = null;
-    let lyric: string | null = null;
-    try {
-      detail = await resolveMusicDetail(existing.neteaseId);
-    } catch {
-      // 只刷新 URL 也可以。
-    }
-    try {
-      lyric = await resolveMusicLyric(existing.neteaseId);
-    } catch {
-      // 歌词刷新不能阻塞 URL 刷新。
-    }
-    const resolved = await resolveMusicUrl(existing.neteaseId, existing.level);
-    const [updated] = await db
-      .update(musicTracks)
-      .set({
-        title: detail?.title ?? existing.title,
-        artist: detail?.artist ?? existing.artist,
-        album: detail?.album ?? existing.album,
-        cover: detail?.cover ?? existing.cover,
-        lyric: lyric ?? existing.lyric,
-        cachedUrl: resolved.url,
-        cachedAt: new Date(),
-        cacheExpiresAt: resolved.expiresAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(musicTracks.id, id))
-      .returning();
-    return c.json(updated);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "刷新歌曲 URL 失败";
-    return c.json({ code: 502, message }, 502);
-  }
 });
 
 app.delete("/music-tracks/:id", async (c) => {

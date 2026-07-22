@@ -1,7 +1,7 @@
 import { Box, Stack, Typography } from "@mui/material";
 import { useMemo, useEffect, useRef } from "react";
 
-type LyricLine = {
+export type LyricLine = {
   time: number;
   texts: string[];
 };
@@ -21,6 +21,7 @@ function parseTime(raw: string) {
 export function parseLrc(lrc: string | null | undefined): LyricLine[] {
   if (!lrc) return [];
   const items = lrc
+    .replace(/\\r\\n|\\n|\\r/g, "\n")
     .split(/\r?\n/)
     .flatMap((line) => {
       const tags = [...line.matchAll(timeTagPattern)];
@@ -48,27 +49,83 @@ export function parseLrc(lrc: string | null | undefined): LyricLine[] {
     .sort((a, b) => a.time - b.time);
 }
 
+export function calculateLineProgress(lines: LyricLine[], activeIndex: number, currentTime: number) {
+  const line = lines[activeIndex];
+  if (!line) return 0;
+
+  const characterCount = Math.max(1, Array.from(line.texts[0]?.replace(/\s/g, "") ?? "").length);
+  const estimatedDuration = Math.min(10, Math.max(2, characterCount * 0.24));
+  const nextLine = lines[activeIndex + 1];
+  const timestampDuration = nextLine ? nextLine.time - line.time : 0;
+  const duration = timestampDuration > 0 && timestampDuration <= 10 ? timestampDuration : estimatedDuration;
+  const charactersPerSecond = characterCount / duration;
+  const progressedCharacters = Math.max(0, currentTime - line.time) * charactersPerSecond;
+
+  return Math.min(1, progressedCharacters / characterCount);
+}
+
+export function findActiveLineIndex(lines: LyricLine[], currentTime: number) {
+  let active = -1;
+  for (let index = 0; index < lines.length; index += 1) {
+    if (lines[index].time <= currentTime + 0.25) active = index;
+    else break;
+  }
+  if (active < 0) return -1;
+
+  const next = lines[active + 1];
+  const longInstrumentalGap = next && next.time - lines[active].time > 10;
+  if (longInstrumentalGap && currentTime - lines[active].time > 6 && currentTime < next.time - 0.25) {
+    return -1;
+  }
+  return active;
+}
+
+export function KaraokeText({ text, progress }: { text: string; progress?: number }) {
+  const previousProgressRef = useRef(progress);
+  const animateForward =
+    progress !== undefined &&
+    previousProgressRef.current !== undefined &&
+    progress >= previousProgressRef.current;
+
+  useEffect(() => {
+    previousProgressRef.current = progress;
+  }, [progress]);
+
+  if (progress === undefined) return text;
+  const progressPercent = Math.min(100, Math.max(0, progress * 100));
+
+  return (
+    <Box component="span" sx={{ display: "inline-block", maxWidth: "100%", position: "relative", color: "text.secondary", verticalAlign: "bottom" }}>
+      {text}
+      <Box
+        component="span"
+        aria-hidden
+        sx={{
+          position: "absolute",
+          inset: 0,
+          color: "primary.main",
+          clipPath: `inset(0 ${100 - progressPercent}% 0 0)`,
+          transition: animateForward ? "clip-path 320ms linear" : "none",
+          textShadow: "0 0 18px rgba(99,102,241,0.35)",
+          pointerEvents: "none",
+        }}
+      >
+        {text}
+      </Box>
+    </Box>
+  );
+}
+
 export function LyricsView({ lyric, currentTime, onSeek }: { lyric: string | null | undefined; currentTime: number; onSeek?: (time: number) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const activeLineRef = useRef<HTMLParagraphElement>(null);
 
   const lines = useMemo(() => parseLrc(lyric), [lyric]);
-  const activeIndex = useMemo(() => {
-    if (!lines.length) return -1;
-    let active = -1;
-    for (let index = 0; index < lines.length; index += 1) {
-      if (lines[index].time <= currentTime + 0.25) active = index;
-      else break;
-    }
-    if (active < 0) return -1;
-
-    const next = lines[active + 1];
-    const longInstrumentalGap = next && next.time - lines[active].time > 10;
-    if (longInstrumentalGap && currentTime - lines[active].time > 6 && currentTime < next.time - 0.25) {
-      return -1;
-    }
-    return active;
-  }, [currentTime, lines]);
+  const activeIndex = useMemo(() => findActiveLineIndex(lines, currentTime), [currentTime, lines]);
+  const activeProgress = useMemo(
+    () => calculateLineProgress(lines, activeIndex, currentTime),
+    [activeIndex, currentTime, lines],
+  );
 
   useEffect(() => {
     if (currentTime < 0.5) {
@@ -96,7 +153,7 @@ export function LyricsView({ lyric, currentTime, onSeek }: { lyric: string | nul
   if (!lines.length) {
     return (
       <Typography color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
-        {lyric || "暂无歌词"}
+        {lyric?.replace(/\\r\\n|\\n|\\r/g, "\n") || "暂无歌词"}
       </Typography>
     );
   }
@@ -106,6 +163,7 @@ export function LyricsView({ lyric, currentTime, onSeek }: { lyric: string | nul
       <Stack spacing={1.2} sx={{ py: currentTime < 0.5 ? 0 : 10 }}>
         {lines.map((line, index) => {
           const active = index === activeIndex;
+          const progressPercent = active ? activeProgress * 100 : 0;
           return (
             <Typography
               key={`${line.time}-${index}`}
@@ -117,16 +175,22 @@ export function LyricsView({ lyric, currentTime, onSeek }: { lyric: string | nul
               {line.texts.map((text, textIndex) => (
                 <Box
                   key={`${line.time}-${textIndex}`}
-                  sx={{
-                    color: active ? (textIndex === 0 ? "primary.main" : "text.primary") : "text.secondary",
-                    fontWeight: active && textIndex === 0 ? 900 : 500,
-                    fontSize: textIndex === 0 ? (active ? "1.08rem" : "0.96rem") : "0.86rem",
-                    opacity: textIndex === 0 ? 1 : active ? 0.82 : 0.62,
-                    lineHeight: 1.65,
-                    textShadow: active && textIndex === 0 ? "0 0 18px rgba(99,102,241,0.35)" : "none",
+                  sx={(theme) => {
+                    const karaoke = active && textIndex === 0;
+                    return {
+                      display: "table",
+                      width: "fit-content",
+                      maxWidth: "100%",
+                      position: "relative",
+                      color: karaoke ? theme.palette.text.secondary : active ? "text.primary" : "text.secondary",
+                      fontWeight: karaoke ? 900 : 500,
+                      fontSize: textIndex === 0 ? (active ? "1.08rem" : "0.96rem") : "0.86rem",
+                      opacity: textIndex === 0 ? 1 : active ? 0.82 : 0.62,
+                      lineHeight: 1.65,
+                    };
                   }}
                 >
-                  {text}
+                  <KaraokeText text={text} progress={active && textIndex === 0 ? progressPercent / 100 : undefined} />
                 </Box>
               ))}
             </Typography>

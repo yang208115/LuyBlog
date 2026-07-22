@@ -203,19 +203,12 @@ export const musicTracks = sqliteTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createId()),
-    neteaseId: text("netease_id").notNull().unique(),
     title: text("title").notNull(),
     artist: text("artist"),
     album: text("album"),
     cover: text("cover"),
-    playlistId: text("playlist_id"),
-    playlistName: text("playlist_name"),
-    playlistCover: text("playlist_cover"),
     lyric: text("lyric"),
-    cachedUrl: text("cached_url"),
-    cachedAt: integer("cached_at", { mode: "timestamp" }),
-    cacheExpiresAt: integer("cache_expires_at", { mode: "timestamp" }),
-    level: text("level").notNull().default("exhigh"),
+    url: text("url").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
     status: text("status", { enum: ["enabled", "disabled"] }).notNull().default("enabled"),
     createdAt: integer("created_at", { mode: "timestamp" })
@@ -226,7 +219,6 @@ export const musicTracks = sqliteTable(
       .default(sql`(strftime('%s', 'now'))`),
   },
   (table) => [
-    index("music_tracks_netease_id_idx").on(table.neteaseId),
     index("music_tracks_status_sort_idx").on(table.status, table.sortOrder),
   ],
 );

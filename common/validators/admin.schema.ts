@@ -123,25 +123,17 @@ export const UpdateUserStatusSchema = z.object({
 });
 
 export const CreateMusicTrackSchema = z.object({
-  neteaseId: z.string().trim().regex(/^\d+$/, "歌曲 ID 必须是数字"),
-  title: z.string().trim().max(200).optional().default(""),
+  url: z.string().trim().url("请输入有效的音乐链接").max(2000),
+  title: z.string().trim().min(1, "请输入歌曲标题").max(200),
   artist: z.string().trim().max(200).nullable().optional(),
   album: z.string().trim().max(200).nullable().optional(),
   cover: z.string().trim().max(1000).nullable().optional(),
   lyric: z.string().trim().max(50000).nullable().optional(),
-  level: z.string().trim().min(1).max(40).default("exhigh"),
   sortOrder: z.number().int().min(0).max(9999).default(0),
   status: z.enum(["enabled", "disabled"]).default("enabled"),
 });
 
 export const UpdateMusicTrackSchema = CreateMusicTrackSchema.partial();
-
-export const ImportMusicPlaylistSchema = z.object({
-  playlist: z.string().trim().min(1).max(300),
-  level: z.string().trim().min(1).max(40).default("exhigh"),
-  status: z.enum(["enabled", "disabled"]).default("enabled"),
-  startSortOrder: z.number().int().min(0).max(9999).optional(),
-});
 
 export const SiteConfigSchema = z.object({
   title: z.string().trim().min(1).max(120),

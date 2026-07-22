@@ -1,9 +1,9 @@
 import { Box, IconButton, Paper, Stack, Typography } from "@mui/material";
-import { PauseRounded, PlayArrowRounded, RefreshRounded, SkipNextRounded } from "@mui/icons-material";
+import { PauseRounded, PlayArrowRounded, SkipNextRounded } from "@mui/icons-material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useLocation, Link as RouterLink } from "react-router-dom";
 import { useMusic } from "../context/MusicProvider";
-import { parseLrc } from "./LyricsView";
+import { calculateLineProgress, findActiveLineIndex, KaraokeText, parseLrc } from "./LyricsView";
 
 export function FloatingPlayer() {
   const location = useLocation();
@@ -12,11 +12,16 @@ export function FloatingPlayer() {
   if (location.pathname === "/music" || location.pathname.startsWith("/admin")) return null;
 
   const lyricLines = parseLrc(music.current.lyric);
+  const activeLyricIndex = findActiveLineIndex(lyricLines, music.currentTime);
   const activeLyric =
-    lyricLines.reduce((active, line) => (line.time <= music.currentTime + 0.25 ? line : active), lyricLines[0])?.texts[0] ||
+    lyricLines[activeLyricIndex]?.texts[0] ||
+    (lyricLines.length ? "♪" : "") ||
     music.current.lyric ||
     music.current.artist ||
     "暂无歌词";
+  const activeLyricProgress = activeLyricIndex >= 0
+    ? calculateLineProgress(lyricLines, activeLyricIndex, music.currentTime)
+    : undefined;
 
   return (
     <Paper
@@ -113,14 +118,11 @@ export function FloatingPlayer() {
             fontWeight: 600,
           }}
         >
-          {music.error || activeLyric}
+          {music.error || <KaraokeText text={activeLyric} progress={activeLyricProgress} />}
         </Typography>
       </Box>
 
       <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ mt: 1 }}>
-        <IconButton size="small" onClick={() => void music.refreshCurrent()} aria-label="刷新歌曲链接" sx={{ color: "text.secondary" }}>
-          <RefreshRounded fontSize="small" />
-        </IconButton>
         <IconButton
           onClick={music.toggle}
           aria-label={music.playing ? "暂停" : "播放"}

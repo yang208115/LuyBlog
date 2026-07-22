@@ -10,22 +10,13 @@ import { useEffect, useMemo, useState } from "react";
 type MusicCollection = { key: string; name: string; cover: string | null; tracks: Array<{ track: Track; index: number }> };
 
 function groupTracks(tracks: Track[]): MusicCollection[] {
-  const groups = new Map<string, MusicCollection>();
-  tracks.forEach((track, index) => {
-    const key = track.playlistId || "manual";
-    const current = groups.get(key);
-    if (current) {
-      current.tracks.push({ track, index });
-    } else {
-      groups.set(key, {
-        key,
-        name: track.playlistName || "单曲收藏",
-        cover: track.playlistCover || track.cover,
-        tracks: [{ track, index }],
-      });
-    }
-  });
-  return Array.from(groups.values());
+  if (!tracks.length) return [];
+  return [{
+    key: "all",
+    name: "播放列表",
+    cover: tracks.find((track) => track.cover)?.cover ?? null,
+    tracks: tracks.map((track, index) => ({ track, index })),
+  }];
 }
 
 export function MusicPage() {
@@ -39,7 +30,7 @@ export function MusicPage() {
   }, [currentCollectionKey]);
 
   return (
-    <PublicPageLayout maxWidth="md" title="音乐" subtitle="按歌单集合收纳歌曲，后端缓存播放 URL，播放失败会自动刷新。" spacing={2.4}>
+    <PublicPageLayout maxWidth="md" title="音乐" spacing={2.4}>
       <Card variant="outlined" sx={glassPanelSx}>
         <CardContent sx={{ p: { xs: 2.2, md: 3 } }}>
           <Stack spacing={2}>
@@ -52,11 +43,10 @@ export function MusicPage() {
                   {music.current.title}
                 </Typography>
                 <Typography color="text.secondary">
-                  {music.current.artist || "未知歌手"} {music.current.neteaseId ? `· ID ${music.current.neteaseId}` : ""}
+                  {music.current.artist || "未知歌手"}{music.current.album ? ` · ${music.current.album}` : ""}
                 </Typography>
                 <Stack direction="row" spacing={1} sx={{ mt: 1 }} useFlexGap flexWrap="wrap">
-                  <Chip size="small" label={music.current.level} />
-                  <Chip size="small" label={music.current.url ? "URL 已缓存" : "URL 未缓存"} color={music.current.url ? "success" : "warning"} />
+                  <Chip size="small" label={music.current.url ? "链接播放" : "未配置链接"} color={music.current.url ? "success" : "warning"} />
                 </Stack>
               </Box>
             </Stack>
@@ -104,7 +94,7 @@ export function MusicPage() {
                       <Box sx={{ minWidth: 0 }}>
                         <Typography sx={{ fontWeight: 800 }} noWrap>{track.title}</Typography>
                         <Typography variant="body2" color="text.secondary" noWrap>
-                          {track.artist || "未知歌手"} · {track.neteaseId || "未配置 ID"}
+                          {track.artist || "未知歌手"}{track.album ? ` · ${track.album}` : ""}
                         </Typography>
                       </Box>
                     </Stack>

@@ -105,38 +105,15 @@ export type AdminUser = {
 
 export type AdminMusicTrack = {
   id: string;
-  neteaseId: string;
+  url: string;
   title: string;
   artist: string | null;
   album: string | null;
   cover: string | null;
-  playlistId: string | null;
-  playlistName: string | null;
-  playlistCover: string | null;
   lyric: string | null;
-  cachedUrl: string | null;
-  cacheExpiresAt: string | null;
-  level: string;
   sortOrder: number;
   status: "enabled" | "disabled";
   updatedAt: string;
-};
-
-export type ImportMusicPlaylistPayload = {
-  playlist: string;
-  level?: string;
-  status?: "enabled" | "disabled";
-  startSortOrder?: number;
-};
-
-export type ImportMusicPlaylistResult = {
-  playlistId: string;
-  playlistName: string;
-  playlistCover: string | null;
-  imported: number;
-  skipped: number;
-  total: number;
-  items: AdminMusicTrack[];
 };
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -192,10 +169,8 @@ export const adminApi = {
   reorderNavItems: (ids: string[]) => request<{ success: true }>("/api/admin/nav-items/reorder", json("PATCH", { ids })),
   deleteNavItem: (id: string) => request<{ success: true }>(`/api/admin/nav-items/${id}`, { method: "DELETE" }),
   music: () => request<ListResponse<AdminMusicTrack>>("/api/admin/music-tracks"),
-  createMusic: (body: Partial<AdminMusicTrack> & { neteaseId: string }) => request<AdminMusicTrack>("/api/admin/music-tracks", json("POST", body)),
-  importMusicPlaylist: (body: ImportMusicPlaylistPayload) => request<ImportMusicPlaylistResult>("/api/admin/music-tracks/import-playlist", json("POST", body)),
+  createMusic: (body: Omit<AdminMusicTrack, "id" | "updatedAt">) => request<AdminMusicTrack>("/api/admin/music-tracks", json("POST", body)),
   updateMusic: (id: string, body: Partial<AdminMusicTrack>) => request<AdminMusicTrack>(`/api/admin/music-tracks/${id}`, json("PATCH", body)),
-  refreshMusic: (id: string) => request<AdminMusicTrack>(`/api/admin/music-tracks/${id}/refresh`, { method: "POST" }),
   deleteMusic: (id: string) => request<{ success: true }>(`/api/admin/music-tracks/${id}`, { method: "DELETE" }),
   comments: () => request<ListResponse<AdminCommentItem>>("/api/admin/comments?page=1&pageSize=100"),
   updateComment: (id: string, status: "visible" | "hidden") => request<AdminCommentItem>(`/api/admin/comments/${id}`, json("PATCH", { status })),
