@@ -1,10 +1,6 @@
-import { Alert, Card, CardContent } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
-import { glassCardSx } from "../components/Glass";
-import { PublicPageLayout } from "../components/Layout";
 import { MarkdownView } from "../components/MarkdownView";
-import { ModernLoader } from "../components/Loading";
 import { contentApi } from "../services/content";
 
 export function MarkdownPage() {
@@ -16,16 +12,22 @@ export function MarkdownPage() {
   });
 
   return (
-    <PublicPageLayout maxWidth="md" title={query.data?.title || slug} spacing={2}>
-      {query.isLoading && <ModernLoader size={40} />}
-      {query.isError && <Alert severity="warning">页面不存在或尚未发布。</Alert>}
-      {query.data && (
-        <Card variant="outlined" sx={glassCardSx}>
-          <CardContent sx={{ p: { xs: 2.4, md: 3.2 } }}>
-            <MarkdownView content={query.data.contentMd} />
-          </CardContent>
-        </Card>
-      )}
-    </PublicPageLayout>
+    <div className="page-shell reading markdown-page">
+      <header className="page-heading">
+        <div>
+          <span className="eyebrow">CUSTOM PAGE / {slug.toUpperCase()}</span>
+          <h1>{query.data?.title || slug}</h1>
+        </div>
+      </header>
+      <article className="article-body markdown-page-card">
+        {query.isLoading && <div className="loader" />}
+        {query.isError && (
+          <div className="empty-state">
+            <strong>页面不存在或尚未发布</strong>
+          </div>
+        )}
+        {query.data && <MarkdownView content={query.data.contentMd} />}
+      </article>
+    </div>
   );
 }

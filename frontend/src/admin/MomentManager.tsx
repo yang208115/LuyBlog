@@ -4,12 +4,15 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminMoment, adminApi, joinLines, splitLines } from "./adminApi";
 import { AdminToolbar, EntityDialog, MarkdownEditor, PublishStatusField, StateBlock, StatusChip } from "./AdminPrimitives";
+import { createMomentSlug } from "./momentSlug";
 
 type MomentForm = { slug: string; contentMd: string; imagesText: string; status: "draft" | "published" };
 const emptyForm: MomentForm = { slug: "", contentMd: "", imagesText: "", status: "published" };
 
 function fromMoment(item?: AdminMoment): MomentForm {
-  return item ? { slug: item.slug, contentMd: item.contentMd, imagesText: joinLines(item.images), status: item.status } : emptyForm;
+  return item
+    ? { slug: item.slug, contentMd: item.contentMd, imagesText: joinLines(item.images), status: item.status }
+    : { ...emptyForm, slug: createMomentSlug() };
 }
 
 function payload(form: MomentForm) {

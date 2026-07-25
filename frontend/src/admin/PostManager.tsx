@@ -1,8 +1,5 @@
-import { Box, Button, Chip, InputAdornment, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
-import { DeleteOutlineRounded, EditRounded, SearchRounded } from "@mui/icons-material";
-import { alpha } from "@mui/material/styles";
 import { useMemo, useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi } from "./adminApi";
 import { StateBlock, StatusChip } from "./AdminPrimitives";
@@ -26,100 +23,52 @@ export function PostManager() {
   }, [items, search]);
 
   return (
-    <Box>
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 1.5,
-          mb: 2,
-          borderRadius: 2,
-          bgcolor: (theme) => alpha(theme.palette.background.paper, theme.palette.mode === "dark" ? 0.72 : 0.92),
-          boxShadow: "none",
-        }}
-      >
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1.2} justifyContent="space-between" alignItems={{ xs: "stretch", md: "center" }}>
-          <TextField
-            size="small"
+    <div>
+      <div className="toolbar admin-toolbar">
+        <label className="search-field">
+          <span>⌕</span>
+          <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索文章"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchRounded fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ minWidth: { md: 320 } }}
+            placeholder="搜索文章…"
           />
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Button variant="outlined" onClick={() => void query.refetch()}>
-              刷新
-            </Button>
-            <Button component={RouterLink} to="/admin/posts/new" variant="contained">
-              写新文章
-            </Button>
-          </Stack>
-        </Stack>
-      </Paper>
+        </label>
+        <div className="toolbar-group">
+          <button className="button ghost" type="button" onClick={() => void query.refetch()}>↻ 刷新</button>
+          <Link className="button primary" to="/admin/posts/new">＋ 写新文章</Link>
+        </div>
+      </div>
+      <div className="admin-filter-row">
+        <div><button className="chip active" type="button">全部 · {filtered.length}</button></div>
+        <small>{filtered.length} 条记录</small>
+      </div>
       <StateBlock loading={query.isLoading} error={query.error} empty={!query.isLoading && filtered.length === 0} />
       {filtered.length > 0 && (
-        <Paper
-          variant="outlined"
-          sx={{
-            overflowX: "auto",
-            borderRadius: 2,
-            bgcolor: (theme) => alpha(theme.palette.background.paper, theme.palette.mode === "dark" ? 0.78 : 0.96),
-            boxShadow: "none",
-          }}
-        >
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>标题</TableCell>
-                <TableCell>标签</TableCell>
-                <TableCell>状态</TableCell>
-                <TableCell>浏览</TableCell>
-                <TableCell>更新</TableCell>
-                <TableCell align="right">操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>文章</th><th>分类与标签</th><th>状态</th><th>浏览</th><th>更新</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
               {filtered.map((post) => (
-                <TableRow key={post.id} hover>
-                  <TableCell>
-                    <Typography sx={{ fontWeight: 800 }}>{post.title}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      /blog/{post.slug}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
-                      {post.category && <Chip size="small" label={post.category} color="primary" />}
-                      {post.tags.map((tag) => (
-                        <Chip key={tag} size="small" label={tag} />
-                      ))}
-                    </Stack>
-                  </TableCell>
-                  <TableCell>
-                    <StatusChip status={post.status} />
-                  </TableCell>
-                  <TableCell>{post.viewCount}</TableCell>
-                  <TableCell>{new Date(post.updatedAt).toLocaleString("zh-CN")}</TableCell>
-                  <TableCell align="right">
-                    <Button component={RouterLink} to={`/admin/posts/${post.id}`} size="small" startIcon={<EditRounded />}>
-                      写作页
-                    </Button>
-                    <Button size="small" color="error" startIcon={<DeleteOutlineRounded />} onClick={() => deleteMutation.mutate(post.id)}>
-                      删除
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <tr key={post.id}>
+                  <td><div className="admin-cell"><span><strong className="cell-title">{post.title}</strong><small className="cell-sub">/blog/{post.slug}</small></span></div></td>
+                  <td><div className="admin-tags">{post.category && <span className="tag solid">{post.category}</span>}{post.tags.map((tag) => <span className="tag" key={tag}>{tag}</span>)}</div></td>
+                  <td><StatusChip status={post.status} /></td>
+                  <td>{post.viewCount.toLocaleString()}</td>
+                  <td>{new Date(post.updatedAt).toLocaleDateString("zh-CN")}</td>
+                  <td><div className="row-actions">
+                    <Link className="button small ghost" to={`/admin/posts/${post.id}`}>写作页</Link>
+                    <button className="button small danger" type="button" onClick={() => deleteMutation.mutate(post.id)}>删除</button>
+                  </div></td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
-        </Paper>
+            </tbody>
+          </table>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

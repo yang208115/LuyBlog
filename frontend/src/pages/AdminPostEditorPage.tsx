@@ -263,23 +263,57 @@ export function AdminPostEditorPage() {
 
   return (
     <AdminWorkspaceLayout>
-      <Paper square elevation={0} sx={{ position: "sticky", top: 64, zIndex: 10, borderBottom: 1, borderColor: "divider" }}>
+      <div className="editor-shell">
+      <Paper
+        className="editor-bar"
+        square
+        elevation={0}
+        sx={{
+          position: "sticky",
+          top: 76,
+          zIndex: 10,
+          borderBottom: 1,
+          borderColor: "divider",
+          bgcolor: "background.paper",
+          backdropFilter: "blur(24px) saturate(150%)",
+        }}
+      >
         <Container maxWidth="xl">
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }} justifyContent="space-between" sx={{ py: 1.4 }}>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={1.5}
+            alignItems={{ md: "center" }}
+            justifyContent="space-between"
+            sx={{ py: 1.4 }}
+          >
             <Stack direction="row" spacing={1.2} alignItems="center" sx={{ minWidth: 0 }}>
-              <Button component={RouterLink} to="/admin" startIcon={<ArrowBackRounded />}>返回后台</Button>
+              <Button component={RouterLink} to="/admin" startIcon={<ArrowBackRounded />}>
+                返回后台
+              </Button>
               <Divider flexItem orientation="vertical" />
               <Box sx={{ minWidth: 0 }}>
-                <Typography variant="h6" sx={{ fontWeight: 900 }} noWrap>{isNew ? "新建文章" : form.title || "编辑文章"}</Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>{form.slug ? `/blog/${form.slug}` : "设置 slug 后生成文章地址"}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 900 }} noWrap>
+                  {isNew ? "新建文章" : form.title || "编辑文章"}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {form.slug ? `/blog/${form.slug}` : "设置 slug 后生成文章地址"}
+                </Typography>
               </Box>
             </Stack>
             <Stack direction="row" spacing={1}>
               <ToggleButtonGroup size="small" exclusive value={mode} onChange={(_, value) => value && setMode(value)}>
                 <ToggleButton value="edit">编辑</ToggleButton>
-                <ToggleButton value="preview"><VisibilityRounded fontSize="small" sx={{ mr: 0.5 }} />预览</ToggleButton>
+                <ToggleButton value="preview">
+                  <VisibilityRounded fontSize="small" sx={{ mr: 0.5 }} />
+                  预览
+                </ToggleButton>
               </ToggleButtonGroup>
-              <Button variant="contained" startIcon={<SaveRounded />} disabled={!canSave || saving} onClick={() => (isNew ? createMutation.mutate() : updateMutation.mutate())}>
+              <Button
+                variant="contained"
+                startIcon={<SaveRounded />}
+                disabled={!canSave || saving}
+                onClick={() => (isNew ? createMutation.mutate() : updateMutation.mutate())}
+              >
                 {saving ? "保存中" : "保存"}
               </Button>
             </Stack>
@@ -288,12 +322,28 @@ export function AdminPostEditorPage() {
       </Paper>
 
       <Container maxWidth="xl" sx={{ py: { xs: 2, md: 2.5 }, px: { xs: 2, md: 3 } }}>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error instanceof Error ? error.message : "保存失败"}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error instanceof Error ? error.message : "保存失败"}
+          </Alert>
+        )}
         {postQuery.isLoading ? (
           <SectionPanel>正在加载文章...</SectionPanel>
         ) : (
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) minmax(340px, 380px)" }, gap: 2, alignItems: "start" }}>
-            <Paper variant="outlined" sx={{ ...glassCardSx, p: 2, minHeight: { lg: "calc(100vh - 190px)" }, minWidth: 0 }}>
+          <Box
+            className="editor-grid"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) minmax(340px, 380px)" },
+              gap: 2,
+              alignItems: "start",
+            }}
+          >
+            <Paper
+              className={`editor-main${mode === "preview" ? " preview" : ""}`}
+              variant="outlined"
+              sx={{ ...glassCardSx, p: 2, minHeight: { lg: "calc(100vh - 190px)" }, minWidth: 0 }}
+            >
               <Stack spacing={2}>
                 <TextField
                   variant="standard"
@@ -321,15 +371,28 @@ export function AdminPostEditorPage() {
                   />
                 ) : (
                   <Stack spacing={2} sx={{ px: { xs: 0, md: 2 }, py: 1 }}>
-                    {form.cover && <Box component="img" src={form.cover} alt={form.title} sx={{ width: "100%", maxHeight: 320, objectFit: "cover", borderRadius: 1.5 }} />}
+                    {form.cover && (
+                      <Box
+                        component="img"
+                        src={form.cover}
+                        alt={form.title}
+                        sx={{ width: "100%", maxHeight: 320, objectFit: "cover", borderRadius: 1.5 }}
+                      />
+                    )}
                     <Box>
-                      <Typography variant="h3" sx={{ fontWeight: 900, fontSize: { xs: "1.9rem", md: "2.4rem" } }}>{form.title || "未填写标题"}</Typography>
-                      <Typography variant="caption" color="text.secondary">{form.slug ? `/blog/${form.slug}` : "尚未设置 slug"}</Typography>
+                      <Typography variant="h3" sx={{ fontWeight: 900, fontSize: { xs: "1.9rem", md: "2.4rem" } }}>
+                        {form.title || "未填写标题"}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {form.slug ? `/blog/${form.slug}` : "尚未设置 slug"}
+                      </Typography>
                     </Box>
                     {(form.category || tags.length > 0) && (
                       <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
                         {form.category && <Chip size="small" color="primary" label={form.category} />}
-                        {tags.map((tag) => <Chip key={tag} size="small" label={tag} variant="outlined" />)}
+                        {tags.map((tag) => (
+                          <Chip key={tag} size="small" label={tag} variant="outlined" />
+                        ))}
                       </Stack>
                     )}
                     {form.summary && <Alert severity="info">{form.summary}</Alert>}
@@ -340,10 +403,12 @@ export function AdminPostEditorPage() {
               </Stack>
             </Paper>
 
-            <Stack spacing={2} sx={{ position: { lg: "sticky" }, top: { lg: 148 }, minWidth: 0, width: "100%" }}>
-              <Paper variant="outlined" sx={{ ...glassCardSx, p: 2 }}>
+            <Stack className="editor-side" spacing={2} sx={{ position: { lg: "sticky" }, top: { lg: 160 }, minWidth: 0, width: "100%" }}>
+              <Paper className="ai-assistant-card" variant="outlined" sx={{ ...glassCardSx, p: 2 }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 900 }}>AI 写作助手</Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 900 }}>
+                    AI 写作助手
+                  </Typography>
                   <Button
                     size="small"
                     startIcon={completionMutation.isPending ? <CircularProgress size={15} /> : <AutoAwesomeRounded />}
@@ -353,26 +418,63 @@ export function AdminPostEditorPage() {
                     补全信息
                   </Button>
                 </Stack>
-                {completionMutation.isError && <Alert severity="error" sx={{ mb: 1.5 }}>{completionMutation.error.message}</Alert>}
+                {completionMutation.isError && (
+                  <Alert severity="error" sx={{ mb: 1.5 }}>
+                    {completionMutation.error.message}
+                  </Alert>
+                )}
                 <Stack spacing={1} sx={{ maxHeight: 300, overflowY: "auto", mb: 1.2, pr: 0.5 }}>
-                  {chatMessages.length === 0 && <Typography variant="body2" color="text.secondary">可以询问改写、结构、措辞或内容补充建议。</Typography>}
+                  {chatMessages.length === 0 && (
+                    <Typography variant="body2" color="text.secondary">
+                      可以询问改写、结构、措辞或内容补充建议。
+                    </Typography>
+                  )}
                   {chatMessages.map((message, index) => (
-                    <Box key={`${message.role}-${index}`} sx={{ alignSelf: message.role === "user" ? "flex-end" : "stretch", maxWidth: message.role === "user" ? "86%" : "100%" }}>
-                      <Paper variant="outlined" sx={{ p: 1.2, bgcolor: message.role === "user" ? "action.selected" : "background.paper" }}>
-                        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{message.content}</Typography>
+                    <Box
+                      key={`${message.role}-${index}`}
+                      sx={{
+                        alignSelf: message.role === "user" ? "flex-end" : "stretch",
+                        maxWidth: message.role === "user" ? "86%" : "100%",
+                      }}
+                    >
+                      <Paper
+                        variant="outlined"
+                        sx={{ p: 1.2, bgcolor: message.role === "user" ? "action.selected" : "background.paper" }}
+                      >
+                        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                          {message.content}
+                        </Typography>
                       </Paper>
                       {message.role === "assistant" && (
                         <Stack direction="row" spacing={0.3} sx={{ mt: 0.4 }}>
-                          <Button size="small" startIcon={<AddRounded />} onClick={() => insertIntoContent(message.content)}>插入</Button>
-                          <Button size="small" onClick={() => insertIntoContent(message.content, true)}>追加</Button>
-                          <Button size="small" startIcon={<ContentCopyRounded />} onClick={() => void navigator.clipboard.writeText(message.content)}>复制</Button>
+                          <Button
+                            size="small"
+                            startIcon={<AddRounded />}
+                            onClick={() => insertIntoContent(message.content)}
+                          >
+                            插入
+                          </Button>
+                          <Button size="small" onClick={() => insertIntoContent(message.content, true)}>
+                            追加
+                          </Button>
+                          <Button
+                            size="small"
+                            startIcon={<ContentCopyRounded />}
+                            onClick={() => void navigator.clipboard.writeText(message.content)}
+                          >
+                            复制
+                          </Button>
                         </Stack>
                       )}
                     </Box>
                   ))}
                   {chatMutation.isPending && <CircularProgress size={20} sx={{ alignSelf: "center" }} />}
                 </Stack>
-                {chatMutation.isError && <Alert severity="error" sx={{ mb: 1 }}>{chatMutation.error.message}</Alert>}
+                {chatMutation.isError && (
+                  <Alert severity="error" sx={{ mb: 1 }}>
+                    {chatMutation.error.message}
+                  </Alert>
+                )}
                 <TextField
                   fullWidth
                   multiline
@@ -388,16 +490,27 @@ export function AdminPostEditorPage() {
                     }
                   }}
                   InputProps={{
-                    endAdornment: <Button size="small" disabled={!chatInput.trim() || chatMutation.isPending} onClick={sendChat}><SendRounded /></Button>,
+                    endAdornment: (
+                      <Button size="small" disabled={!chatInput.trim() || chatMutation.isPending} onClick={sendChat}>
+                        <SendRounded />
+                      </Button>
+                    ),
                   }}
                 />
               </Paper>
 
               <Paper variant="outlined" sx={{ ...glassCardSx, p: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 900, mb: 1.5 }}>发布设置</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 900, mb: 1.5 }}>
+                  发布设置
+                </Typography>
                 <Stack spacing={1.5}>
                   <Stack direction="row" spacing={1} alignItems="flex-start">
-                    <TextField fullWidth label="Slug" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} />
+                    <TextField
+                      fullWidth
+                      label="Slug"
+                      value={form.slug}
+                      onChange={(event) => setForm({ ...form, slug: event.target.value })}
+                    />
                     <Button
                       variant="outlined"
                       sx={{ minWidth: 88, minHeight: 56 }}
@@ -421,16 +534,34 @@ export function AdminPostEditorPage() {
                     options={taxonomyQuery.data?.tags ?? []}
                     value={tags}
                     onChange={(_, value) => setForm((current) => ({ ...current, tagsText: joinLines(value) }))}
-                    renderTags={(value, getTagProps) => value.map((tag, index) => <Chip label={tag} size="small" {...getTagProps({ index })} key={tag} />)}
-                    renderInput={(inputParams) => <TextField {...inputParams} fullWidth label="标签" helperText="回车确认，可选择已有标签或新建" />}
+                    renderTags={(value, getTagProps) =>
+                      value.map((tag, index) => <Chip label={tag} size="small" {...getTagProps({ index })} key={tag} />)
+                    }
+                    renderInput={(inputParams) => (
+                      <TextField {...inputParams} fullWidth label="标签" helperText="回车确认，可选择已有标签或新建" />
+                    )}
                   />
                 </Stack>
               </Paper>
               <Paper variant="outlined" sx={{ ...glassCardSx, p: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 900, mb: 1.5 }}>展示信息</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 900, mb: 1.5 }}>
+                  展示信息
+                </Typography>
                 <Stack spacing={1.5}>
-                  <TextField fullWidth label="摘要" multiline minRows={4} value={form.summary} onChange={(event) => setForm({ ...form, summary: event.target.value })} />
-                  <TextField fullWidth label="封面 URL" value={form.cover} onChange={(event) => setForm({ ...form, cover: event.target.value })} />
+                  <TextField
+                    fullWidth
+                    label="摘要"
+                    multiline
+                    minRows={4}
+                    value={form.summary}
+                    onChange={(event) => setForm({ ...form, summary: event.target.value })}
+                  />
+                  <TextField
+                    fullWidth
+                    label="封面 URL"
+                    value={form.cover}
+                    onChange={(event) => setForm({ ...form, cover: event.target.value })}
+                  />
                 </Stack>
               </Paper>
             </Stack>
@@ -444,10 +575,19 @@ export function AdminPostEditorPage() {
           <Stack spacing={2}>
             {completionResult?.titles && (
               <Box>
-                <FormControlLabel control={<Checkbox checked={selectedFields.has("titles")} onChange={() => toggleCompletionField("titles")} />} label={completionLabel("titles")} />
+                <FormControlLabel
+                  control={
+                    <Checkbox checked={selectedFields.has("titles")} onChange={() => toggleCompletionField("titles")} />
+                  }
+                  label={completionLabel("titles")}
+                />
                 <Stack sx={{ pl: 1 }}>
                   {completionResult.titles.map((title) => (
-                    <FormControlLabel key={title} control={<Radio checked={selectedTitle === title} onChange={() => setSelectedTitle(title)} />} label={title} />
+                    <FormControlLabel
+                      key={title}
+                      control={<Radio checked={selectedTitle === title} onChange={() => setSelectedTitle(title)} />}
+                      label={title}
+                    />
                   ))}
                 </Stack>
               </Box>
@@ -457,8 +597,15 @@ export function AdminPostEditorPage() {
               if (!value) return null;
               return (
                 <Box key={field}>
-                  <FormControlLabel control={<Checkbox checked={selectedFields.has(field)} onChange={() => toggleCompletionField(field)} />} label={completionLabel(field)} />
-                  <Typography variant="body2" color="text.secondary" sx={{ pl: 4, whiteSpace: "pre-wrap" }}>{Array.isArray(value) ? value.join("、") : value}</Typography>
+                  <FormControlLabel
+                    control={
+                      <Checkbox checked={selectedFields.has(field)} onChange={() => toggleCompletionField(field)} />
+                    }
+                    label={completionLabel(field)}
+                  />
+                  <Typography variant="body2" color="text.secondary" sx={{ pl: 4, whiteSpace: "pre-wrap" }}>
+                    {Array.isArray(value) ? value.join("、") : value}
+                  </Typography>
                 </Box>
               );
             })}
@@ -466,9 +613,12 @@ export function AdminPostEditorPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCompletionResult(null)}>取消</Button>
-          <Button variant="contained" disabled={selectedFields.size === 0} onClick={applyCompletion}>应用所选内容</Button>
+          <Button variant="contained" disabled={selectedFields.size === 0} onClick={applyCompletion}>
+            应用所选内容
+          </Button>
         </DialogActions>
       </Dialog>
+      </div>
     </AdminWorkspaceLayout>
   );
 }

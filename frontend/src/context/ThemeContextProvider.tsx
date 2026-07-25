@@ -1,4 +1,4 @@
-import { createContext, useState, useMemo, useContext, ReactNode } from "react";
+import { createContext, useState, useMemo, useContext, ReactNode, useEffect } from "react";
 import { ThemeProvider as MuiThemeProvider, createTheme, type PaletteMode } from "@mui/material";
 import { lightTheme, darkTheme } from "../theme";
 import { useCallback } from "react";
@@ -48,6 +48,10 @@ export const AppThemeProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const theme = useMemo(() => (themeMode === "light" ? lightTheme : darkTheme), [themeMode]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeMode;
+  }, [themeMode]);
 
   return (
     <AppThemeContext.Provider value={{ themeMode, toggleTheme }}>

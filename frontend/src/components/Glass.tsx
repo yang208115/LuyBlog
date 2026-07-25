@@ -1,41 +1,58 @@
 import { Paper } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import type { PaperProps, SxProps, Theme } from "@mui/material";
 import type { ResponsiveStyleValue } from "@mui/system";
 
 export const glassPanelSx: SxProps<Theme> = {
-  borderRadius: 3,
+  borderRadius: 3.5,
   backgroundColor: (theme) => theme.glass.background,
-  backdropFilter: "blur(18px) saturate(180%)",
-  WebkitBackdropFilter: "blur(18px) saturate(180%)",
-  border: "1px solid rgba(255,255,255,0.32)",
-  boxShadow: "0 22px 60px rgba(15,23,42,0.22)",
+  backgroundImage: (theme) =>
+    theme.palette.mode === "dark"
+      ? "linear-gradient(145deg, rgba(255,255,255,.09), transparent 48%)"
+      : "linear-gradient(145deg, rgba(255,255,255,.52), transparent 48%)",
+  backdropFilter: "blur(26px) saturate(160%)",
+  WebkitBackdropFilter: "blur(26px) saturate(160%)",
+  border: (theme) => `1px solid ${theme.palette.mode === "dark" ? "rgba(223,234,255,.18)" : "rgba(255,255,255,.66)"}`,
+  boxShadow: (theme) =>
+    theme.palette.mode === "dark"
+      ? "0 24px 72px rgba(0,5,24,.32), inset 0 1px 0 rgba(255,255,255,.09)"
+      : "0 24px 72px rgba(35,54,100,.18), inset 0 1px 0 rgba(255,255,255,.55)",
   overflow: "hidden",
   transition: "transform 450ms ease, box-shadow 450ms ease, border-color 450ms ease",
   "&:hover": {
-    transform: "translateY(-4px) scale(1.01)",
-    borderColor: "rgba(255,255,255,0.52)",
-    boxShadow: "0 28px 76px rgba(15,23,42,0.28)",
+    transform: "translateY(-3px)",
+    borderColor: (theme) => alpha(theme.palette.primary.main, 0.48),
+    boxShadow: (theme) =>
+      theme.palette.mode === "dark"
+        ? "0 30px 86px rgba(0,5,24,.42), inset 0 1px 0 rgba(255,255,255,.14)"
+        : "0 30px 86px rgba(35,54,100,.24), inset 0 1px 0 rgba(255,255,255,.72)",
   },
 };
 
 export const glassCardSx: SxProps<Theme> = {
-  borderRadius: 2,
+  borderRadius: 3,
   backgroundColor: (theme) => theme.glass.background,
-  backdropFilter: "blur(14px)",
-  WebkitBackdropFilter: "blur(14px)",
+  backgroundImage: (theme) =>
+    theme.palette.mode === "dark"
+      ? "linear-gradient(145deg, rgba(255,255,255,.07), transparent 48%)"
+      : "linear-gradient(145deg, rgba(255,255,255,.45), transparent 48%)",
+  backdropFilter: "blur(22px) saturate(155%)",
+  WebkitBackdropFilter: "blur(22px) saturate(155%)",
   border: (theme) => `1px solid ${theme.palette.divider}`,
   boxShadow: (theme) =>
-    `0 8px 28px ${theme.palette.mode === "dark" ? "rgba(0,0,0,0.24)" : "rgba(15,23,42,0.07)"}`,
+    theme.palette.mode === "dark"
+      ? "0 18px 54px rgba(1,7,29,.24), inset 0 1px 0 rgba(255,255,255,.07)"
+      : "0 18px 54px rgba(35,54,100,.13), inset 0 1px 0 rgba(255,255,255,.46)",
 };
 
 export const interactiveGlassCardSx: SxProps<Theme> = {
   ...glassCardSx,
   transition: "transform 250ms ease, box-shadow 250ms ease, border-color 250ms ease",
   "&:hover": {
-    transform: "translateY(-2px)",
-    borderColor: (theme) => theme.palette.primary.main,
+    transform: "translateY(-3px)",
+    borderColor: (theme) => alpha(theme.palette.primary.main, 0.5),
     boxShadow: (theme) =>
-      `0 14px 34px ${theme.palette.mode === "dark" ? "rgba(96,165,250,0.2)" : "rgba(37,99,235,0.18)"}`,
+      `0 20px 48px ${theme.palette.mode === "dark" ? "rgba(82,100,220,.24)" : "rgba(37,62,155,.2)"}`,
   },
 };
 

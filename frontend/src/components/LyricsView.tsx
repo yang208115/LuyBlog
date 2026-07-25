@@ -65,9 +65,12 @@ export function calculateLineProgress(lines: LyricLine[], activeIndex: number, c
 }
 
 export function findActiveLineIndex(lines: LyricLine[], currentTime: number) {
+  const switchGraceSeconds = 0.18;
   let active = -1;
   for (let index = 0; index < lines.length; index += 1) {
-    if (lines[index].time <= currentTime + 0.25) active = index;
+    const activationTime =
+      lines[index].time + (index === 0 ? 0 : switchGraceSeconds);
+    if (activationTime <= currentTime) active = index;
     else break;
   }
   if (active < 0) return -1;
@@ -135,17 +138,14 @@ export function LyricsView({ lyric, currentTime, onSeek }: { lyric: string | nul
     if (activeLineRef.current && containerRef.current) {
       const container = containerRef.current;
       const activeLine = activeLineRef.current;
-
-      // Calculate the scroll position to center the active line
-      const containerHeight = container.clientHeight;
-      const lineTop = activeLine.offsetTop;
-      const lineHeight = activeLine.clientHeight;
-
-      const scrollTop = lineTop - containerHeight / 2 + lineHeight / 2;
+      const containerRect = container.getBoundingClientRect();
+      const lineRect = activeLine.getBoundingClientRect();
+      const lineTopInsideContainer = container.scrollTop + lineRect.top - containerRect.top;
+      const scrollTop = lineTopInsideContainer - container.clientHeight / 2 + lineRect.height / 2;
 
       container.scrollTo({
-        top: scrollTop,
-        behavior: "smooth"
+        top: Math.max(0, scrollTop),
+        behavior: "smooth",
       });
     }
   }, [activeIndex]);
@@ -159,8 +159,8 @@ export function LyricsView({ lyric, currentTime, onSeek }: { lyric: string | nul
   }
 
   return (
-    <Box ref={containerRef} sx={{ height: { xs: 260, md: 360 }, overflowY: "auto", pr: 1, scrollBehavior: "smooth" }}>
-      <Stack spacing={1.2} sx={{ py: currentTime < 0.5 ? 0 : 10 }}>
+    <Box className="lyrics-view" ref={containerRef} sx={{ height: { xs: 260, md: 360 }, overflowY: "auto", pr: 1, scrollBehavior: "smooth" }}>
+      <Stack className="lyrics-view-list" spacing={1.2} sx={{ py: currentTime < 0.5 ? 0 : 10 }}>
         {lines.map((line, index) => {
           const active = index === activeIndex;
           const progressPercent = active ? activeProgress * 100 : 0;
@@ -170,11 +170,13 @@ export function LyricsView({ lyric, currentTime, onSeek }: { lyric: string | nul
               ref={active ? activeLineRef : null}
               onClick={() => onSeek?.(line.time)}
               component="div"
+              className={`lyric-line${active ? " active" : ""}`}
               sx={{ cursor: onSeek ? "pointer" : "default", transition: "all 180ms ease" }}
             >
               {line.texts.map((text, textIndex) => (
                 <Box
                   key={`${line.time}-${textIndex}`}
+                  className={`lyric-text ${textIndex === 0 ? "primary" : "translation"}`}
                   sx={(theme) => {
                     const karaoke = active && textIndex === 0;
                     return {

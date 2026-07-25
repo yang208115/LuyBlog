@@ -6,7 +6,11 @@ import { useAppTheme } from "../context/ThemeContextProvider";
 export function ToggleThemeButton() {
   const { themeMode, toggleTheme } = useAppTheme();
   return (
-    <IconButton sx={{ ml: 1 }} onClick={toggleTheme} color="inherit">
+    <IconButton
+      aria-label={themeMode === "dark" ? "切换到浅色主题" : "切换到深色主题"}
+      onClick={toggleTheme}
+      color="inherit"
+    >
       {themeMode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
     </IconButton>
   );

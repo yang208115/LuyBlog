@@ -1,13 +1,9 @@
 import {
-  Alert,
-  Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  InputAdornment,
   MenuItem,
   Paper,
   Stack,
@@ -18,7 +14,6 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import type { TextFieldProps } from "@mui/material";
-import { AddRounded, RefreshRounded, SearchRounded } from "@mui/icons-material";
 import { useState } from "react";
 import { MarkdownView } from "../components/MarkdownView";
 import { ModernLoader } from "../components/Loading";
@@ -54,23 +49,23 @@ export function PublishStatusField({
 }
 
 export function StatusChip({ status }: { status: string }) {
-  const enabled = status === "published" || status === "enabled" || status === "visible" || status === "active" || status === "admin";
-  return (
-    <Chip
-      size="small"
-      label={status}
-      sx={{
-        fontWeight: 700,
-        letterSpacing: "0.05em",
-        textTransform: "uppercase",
-        fontSize: "0.7rem",
-        height: 22,
-        bgcolor: enabled ? (theme) => alpha(theme.palette.success.main, 0.15) : (theme) => alpha(theme.palette.text.secondary, 0.1),
-        color: enabled ? "success.main" : "text.secondary",
-        border: "none"
-      }}
-    />
-  );
+  const labels: Record<string, string> = {
+    published: "已发布",
+    draft: "草稿",
+    enabled: "启用",
+    disabled: "禁用",
+    visible: "可见",
+    hidden: "隐藏",
+    active: "正常",
+    banned: "封禁",
+    admin: "管理员",
+    user: "用户",
+    pending: "待审核",
+  };
+  const muted = ["draft", "disabled", "hidden", "banned", "user"];
+  const warning = ["pending"];
+  const className = warning.includes(status) ? "status warn" : muted.includes(status) ? "status draft" : "status";
+  return <span className={className}>{labels[status] ?? status}</span>;
 }
 
 export function AdminToolbar({
@@ -87,79 +82,51 @@ export function AdminToolbar({
   createLabel?: string;
 }) {
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 2,
-        mb: 3,
-        borderRadius: 3,
-        bgcolor: "background.paper",
-        border: 1,
-        borderColor: "divider",
-      }}
-    >
-      <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems={{ xs: "stretch", md: "center" }}>
-        <TextField
-          size="small"
-          placeholder="搜索内容..."
-          value={search}
-          onChange={(event) => onSearch(event.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchRounded fontSize="small" sx={{ color: "text.secondary" }} />
-              </InputAdornment>
-            ),
-            sx: { borderRadius: 2, bgcolor: (theme) => alpha(theme.palette.background.default, 0.5) }
-          }}
-          sx={{ minWidth: { md: 360 } }}
-        />
-        <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+    <>
+      <div className="toolbar admin-toolbar">
+        <label className="search-field">
+          <span>⌕</span>
+          <input
+            value={search}
+            onChange={(event) => onSearch(event.target.value)}
+            placeholder="搜索内容…"
+          />
+        </label>
+        <div className="toolbar-group">
           {onRefresh && (
-            <Button
-              variant="outlined"
-              startIcon={<RefreshRounded />}
-              onClick={onRefresh}
-              sx={{ borderRadius: 2, color: "text.secondary", borderColor: "divider" }}
-            >
-              刷新
-            </Button>
+            <button className="button ghost" type="button" onClick={onRefresh}>↻ 刷新</button>
           )}
           {onCreate && (
-            <Button
-              variant="contained"
-              startIcon={<AddRounded />}
-              onClick={onCreate}
-              disableElevation
-              sx={{ borderRadius: 2, px: 3 }}
-            >
-              {createLabel}
-            </Button>
+            <button className="button primary" type="button" onClick={onCreate}>＋ {createLabel}</button>
           )}
-        </Stack>
-      </Stack>
-    </Paper>
+        </div>
+      </div>
+    </>
   );
 }
 
 export function StateBlock({ loading, error, empty }: { loading?: boolean; error?: unknown; empty?: boolean }) {
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+      <div className="admin-state-block">
         <ModernLoader size={48} />
-      </Box>
+      </div>
     );
   }
-  if (error) return (
-    <Alert severity="error" sx={{ borderRadius: 2, mb: 3 }}>
-      {error instanceof Error ? error.message : "加载失败"}
-    </Alert>
-  );
-  if (empty) return (
-    <Box sx={{ py: 8, textAlign: "center" }}>
-      <Typography color="text.secondary" sx={{ fontWeight: 500 }}>暂无数据</Typography>
-    </Box>
-  );
+  if (error)
+    return (
+      <div className="admin-state-block error" role="alert">
+        {error instanceof Error ? error.message : "加载失败"}
+      </div>
+    );
+  if (empty)
+    return (
+      <div className="empty-state">
+        <b>⌕</b>
+        <strong>没有找到匹配的数据</strong>
+        <span>试试更换关键词或状态筛选。</span>
+      </div>
+    );
   return null;
 }
 
@@ -178,7 +145,9 @@ export function MarkdownEditor({
   return (
     <Stack spacing={1.5}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{label}</Typography>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+          {label}
+        </Typography>
         <ToggleButtonGroup
           size="small"
           exclusive
@@ -195,12 +164,12 @@ export function MarkdownEditor({
                 color: "primary.contrastText",
                 "&:hover": {
                   bgcolor: "primary.dark",
-                }
-              }
+                },
+              },
             },
             bgcolor: (theme) => alpha(theme.palette.divider, 0.5),
             p: 0.5,
-            borderRadius: 2
+            borderRadius: 2,
           }}
         >
           <ToggleButton value="edit">编辑</ToggleButton>
@@ -225,7 +194,7 @@ export function MarkdownEditor({
             borderRadius: 2,
             border: 1,
             borderColor: "divider",
-            bgcolor: (theme) => alpha(theme.palette.background.default, 0.5)
+            bgcolor: (theme) => alpha(theme.palette.background.default, 0.5),
           }}
         >
           <MarkdownView content={value || "暂无内容"} />
@@ -258,26 +227,20 @@ export function EntityDialog({
       maxWidth="md"
       PaperProps={{
         sx: {
-          borderRadius: 3,
+          borderRadius: "22px",
           backgroundImage: "none",
-        }
+        },
       }}
     >
-      <DialogTitle sx={{ fontWeight: 800, px: 3, py: 2.5, letterSpacing: "-0.01em" }}>
-        {title}
-      </DialogTitle>
+      <DialogTitle sx={{ fontWeight: 800, px: 3, py: 2.5, letterSpacing: "-0.01em" }}>{title}</DialogTitle>
       <DialogContent dividers sx={{ p: 3, borderColor: "divider" }}>
         {children}
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2, bgcolor: (theme) => alpha(theme.palette.background.default, 0.5) }}>
-        <Button onClick={onClose} sx={{ color: "text.secondary", fontWeight: 600 }}>取消</Button>
-        <Button
-          variant="contained"
-          onClick={onSave}
-          disabled={saving}
-          disableElevation
-          sx={{ borderRadius: 2, px: 3 }}
-        >
+        <Button onClick={onClose} sx={{ color: "text.secondary", fontWeight: 600 }}>
+          取消
+        </Button>
+        <Button variant="contained" onClick={onSave} disabled={saving} disableElevation sx={{ borderRadius: 2, px: 3 }}>
           {saving ? "保存中..." : "保存"}
         </Button>
       </DialogActions>

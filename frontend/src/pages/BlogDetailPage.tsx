@@ -1,87 +1,69 @@
-import { Alert, Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
-import { VisibilityRounded } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { Comments } from "../components/Comments";
-import { glassCardSx, SectionPanel } from "../components/Glass";
-import { PublicPageLayout } from "../components/Layout";
 import { MarkdownView } from "../components/MarkdownView";
 import { contentApi, normalizeTags } from "../services/content";
-import { ModernLoader } from "../components/Loading";
 
 export function BlogDetailPage() {
   const { slug = "" } = useParams();
-  const postQuery = useQuery({
+  const query = useQuery({
     queryKey: ["blog", "post", slug],
     queryFn: () => contentApi.post(slug),
     enabled: Boolean(slug),
   });
 
-  if (postQuery.isLoading) {
+  if (query.isLoading) {
     return (
-      <PublicPageLayout maxWidth="md">
-        <SectionPanel sx={{ display: "flex", justifyContent: "center" }}>
-          <ModernLoader size={40} />
-        </SectionPanel>
-      </PublicPageLayout>
+      <div className="page-shell reading">
+        <div className="status-page">
+          <section className="status-card">
+            <div className="loader" />
+            <span className="eyebrow">LOADING ARTICLE</span>
+            <h1>正在展开文章</h1>
+          </section>
+        </div>
+      </div>
     );
   }
 
-  if (postQuery.isError || !postQuery.data) {
+  if (!query.data) {
     return (
-      <PublicPageLayout maxWidth="md">
-        <Alert severity="error">文章不存在或已下线。</Alert>
-      </PublicPageLayout>
+      <div className="page-shell reading">
+        <div className="empty-state">
+          <strong>文章不存在或已下线</strong>
+          <p>回到归档页看看其他内容吧。</p>
+        </div>
+      </div>
     );
   }
 
-  const post = postQuery.data;
+  const post = query.data;
   const tags = normalizeTags(post.tags);
 
   return (
-    <PublicPageLayout maxWidth="md" spacing={2.2}>
-      <SectionPanel padding={{ xs: 2.2, md: 3 }}>
-        <Stack spacing={1.2}>
-          {post.cover && (
-            <Box
-              component="img"
-              src={post.cover}
-              alt={post.title}
-              sx={{ width: "100%", maxHeight: 320, objectFit: "cover", borderRadius: 1.5 }}
-            />
-          )}
-          <Typography variant="h3" sx={{ fontWeight: 800, fontSize: { xs: "1.9rem", md: "2.4rem" } }}>
-            {post.title}
-          </Typography>
-          <Stack direction="row" spacing={1.2} alignItems="center" useFlexGap flexWrap="wrap">
-            <Typography color="text.secondary">
-              {new Date(post.publishedAt || post.createdAt).toLocaleString("zh-CN")}
-              {post.readingTime ? ` · ${post.readingTime} 分钟阅读` : ""}
-            </Typography>
-            <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
-              <VisibilityRounded fontSize="small" />
-              <Typography variant="body2">{post.viewCount} 次浏览</Typography>
-            </Stack>
-          </Stack>
-          {(post.category || tags.length > 0) && (
-            <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
-              {post.category && <Chip label={post.category} size="small" color="primary" />}
-              {tags.map((tag) => (
-                <Chip key={tag} label={tag} size="small" variant="outlined" />
-              ))}
-            </Stack>
-          )}
-          {post.summary && <Alert severity="info">{post.summary}</Alert>}
-        </Stack>
-      </SectionPanel>
-
-      <Card variant="outlined" sx={glassCardSx}>
-        <CardContent sx={{ p: { xs: 2.2, md: 3 } }}>
-          <MarkdownView content={post.contentMd} />
-        </CardContent>
-      </Card>
-
+    <article className="page-shell reading">
+      <header className="article-header">
+        <span className="eyebrow">{post.category || "ARTICLE"} · FIELD NOTE</span>
+        <h1>{post.title}</h1>
+        <div className="article-meta">
+          <span>{new Date(post.publishedAt || post.createdAt).toLocaleDateString("zh-CN")}</span>
+          <span>{post.readingTime || 6} MIN READ</span>
+          <span>◉ {post.viewCount.toLocaleString("zh-CN")} VIEWS</span>
+        </div>
+        <div className="tag-list">
+          {post.category && <span className="tag solid">{post.category}</span>}
+          {tags.map((tag) => (
+            <span className="tag" key={tag}>
+              {tag}
+            </span>
+          ))}
+        </div>
+        {post.summary && <div className="article-summary">{post.summary}</div>}
+      </header>
+      <div className="article-body">
+        <MarkdownView content={post.contentMd} />
+      </div>
       <Comments targetType="post" targetSlug={post.slug} />
-    </PublicPageLayout>
+    </article>
   );
 }

@@ -1,41 +1,12 @@
-import {
-  AppBar,
-  Box,
-  Button,
-  Container,
-  Toolbar,
-  Typography,
-  CssBaseline,
-  useTheme,
-  Avatar,
-  Menu,
-  MenuItem,
-  IconButton,
-  Stack,
-  Drawer,
-  List,
-  ListItemButton,
-  ListItemText,
-} from "@mui/material";
-import {
-  AdminPanelSettingsRounded,
-  CloseRounded,
-  ExitToApp as LogoutIcon,
-  GitHub as GitHubIcon,
-  MenuRounded,
-} from "@mui/icons-material";
-import { alpha } from "@mui/material/styles";
 import { useQuery } from "@tanstack/react-query";
-import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Link as RouterLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { Footer } from "./components/Footer";
 import { BackgroundEffects } from "./components/BackgroundEffects";
 import { FloatingPlayer } from "./components/FloatingPlayer";
-import { ToggleThemeButton } from "./components/ToggleThemeButton";
 import { useAuth } from "./hooks/useAuth";
 import { useSiteConfig } from "./context/SiteConfigProvider";
-import { ModernLoader } from "./components/Loading";
-import { defaultNavItems } from "./config/navigation";
+import { useAppTheme } from "./context/ThemeContextProvider";
 import { contentApi } from "./services/content";
 
 function isExternalPath(path: string) {
@@ -49,29 +20,39 @@ function isActiveNav(pathname: string, targetPath: string) {
   return pathname === targetPath || pathname.startsWith(`${targetPath.replace(/\/$/, "")}/`);
 }
 
-function App() {
+const prototypeNavigation = [
+  ["/", "首页"],
+  ["/blog", "文章"],
+  ["/moments", "瞬间"],
+  ["/projects", "项目"],
+  ["/music", "音乐"],
+  ["/friends", "友链"],
+  ["/about", "关于"],
+] as const;
+
+export default function App() {
   const location = useLocation();
-  const theme = useTheme();
-  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const navigate = useNavigate();
   const siteConfig = useSiteConfig();
-  const navQuery = useQuery({ queryKey: ["navigation"], queryFn: contentApi.navigation, staleTime: 5 * 60 * 1000 });
-  const navItems = navQuery.data?.length ? navQuery.data : defaultNavItems;
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const { themeMode, toggleTheme } = useAppTheme();
+  const { user, isAuthenticated, login, logout } = useAuth();
+  const navQuery = useQuery({
+    queryKey: ["navigation"],
+    queryFn: contentApi.navigation,
+    staleTime: 5 * 60 * 1000,
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const isAdminRoute = location.pathname.startsWith("/admin");
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleLogout = () => {
-    logout();
-    handleMenuClose();
-  };
+  const navItems = useMemo(
+    () =>
+      prototypeNavigation.map(([path, fallbackLabel]) => {
+        const configured = navQuery.data?.find((item) => item.path === path);
+        return { path, label: configured?.label === "归档" ? "文章" : configured?.label || fallbackLabel };
+      }),
+    [navQuery.data],
+  );
 
   useEffect(() => {
     document.title = siteConfig.title;
@@ -84,244 +65,172 @@ function App() {
     favicon.href = siteConfig.faviconUrl;
   }, [siteConfig.faviconUrl, siteConfig.title]);
 
+  useEffect(() => {
+    document.body.classList.toggle("admin-mode", isAdminRoute);
+    return () => document.body.classList.remove("admin-mode");
+  }, [isAdminRoute]);
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setAccountOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        navigate("/search");
+      }
+    };
+    window.addEventListener("keydown", handleSearchShortcut);
+    return () => window.removeEventListener("keydown", handleSearchShortcut);
+  }, [navigate]);
+
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh", position: "relative" }}>
-      <CssBaseline />
+    <>
       {!isAdminRoute && <BackgroundEffects />}
-      <AppBar
-        position="fixed"
-        elevation={0}
-        sx={{
-          color: theme.palette.text.primary,
-          backgroundColor: theme.appBar.background,
-          backdropFilter: "blur(22px) saturate(180%)",
-          WebkitBackdropFilter: "blur(22px) saturate(180%)",
-          borderBottom: `1px solid ${alpha(theme.palette.common.white, theme.palette.mode === "dark" ? 0.14 : 0.52)}`,
-          boxShadow: `0 14px 44px ${alpha(theme.palette.common.black, theme.palette.mode === "dark" ? 0.24 : 0.08)}`,
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: theme.zIndex.appBar,
-        }}
-      >
-        <Container maxWidth="xl">
-          <Toolbar disableGutters sx={{ gap: 1.5 }}>
-            <IconButton
-              aria-label="打开导航"
-              onClick={() => setMobileOpen(true)}
-              sx={{
-                display: { xs: "inline-flex", md: "none" },
-                borderRadius: 2,
-                backgroundColor: alpha(theme.palette.background.paper, 0.42),
-              }}
+      <a className="skip-link" href="#app">
+        跳到主要内容
+      </a>
+      <div className="paper-noise" aria-hidden="true" />
+
+      <header className="site-header">
+        <div className="header-inner">
+          <button
+            className="icon-button mobile-only"
+            type="button"
+            aria-label="打开菜单"
+            onClick={() => setMobileOpen(true)}
+          >
+            <span aria-hidden="true">☰</span>
+          </button>
+
+          <RouterLink className="brand" to="/" aria-label={`${siteConfig.title}首页`}>
+            <span className="brand-mark">{siteConfig.authorName.slice(0, 1)}</span>
+            <span className="brand-copy">
+              <strong>
+                {siteConfig.navTitle} <i>{siteConfig.navSuffix}</i> {siteConfig.navAfter}
+              </strong>
+              <small>YUNYANG&apos;S DIGITAL GARDEN</small>
+            </span>
+          </RouterLink>
+
+          <nav className="primary-nav" aria-label="主导航">
+            {navItems.map((item) => (
+              <RouterLink
+                key={item.path}
+                to={item.path}
+                className={isActiveNav(location.pathname, item.path) ? "active" : undefined}
+              >
+                {item.label}
+              </RouterLink>
+            ))}
+          </nav>
+
+          <div className="header-actions">
+            {!isAdminRoute && (
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="打开搜索"
+                onClick={() => navigate("/search")}
+              >
+                <span aria-hidden="true">⌕</span>
+              </button>
+            )}
+            <button
+              className="icon-button"
+              type="button"
+              aria-label={themeMode === "dark" ? "切换到浅色主题" : "切换到深色主题"}
+              onClick={toggleTheme}
             >
-              <MenuRounded />
-            </IconButton>
-            <Box
-              component={RouterLink}
-              to="/"
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                minWidth: 0,
-                textDecoration: "none",
-                color: "inherit",
-              }}
-            >
-                <Typography
-                  variant="h6"
-                  noWrap
-                sx={{
-                  ml: 1.5,
-                  display: { xs: "none", md: "flex" },
-                  fontWeight: 900,
-                  letterSpacing: 0,
+              <span aria-hidden="true">◐</span>
+            </button>
+            <div style={{ position: "relative" }}>
+              <button
+                className="profile-button"
+                type="button"
+                aria-label={isAuthenticated ? "账户菜单" : "GitHub 登录"}
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    login();
+                    return;
+                  }
+                  setAccountOpen((value) => !value);
                 }}
               >
-                {siteConfig.navTitle}
-                {siteConfig.navSuffix}
-                {siteConfig.navAfter}
-              </Typography>
-            </Box>
-
-            <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
-              <Stack
-                direction="row"
-                spacing={0.5}
-                sx={{
-                  display: isAdminRoute ? "none" : { xs: "none", md: "flex" },
-                  p: 0.5,
-                  borderRadius: 999,
-                  backgroundColor: alpha(theme.palette.background.paper, theme.palette.mode === "dark" ? 0.2 : 0.36),
-                  border: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
-                }}
-              >
-                {navItems.map((item) => {
-                  const external = isExternalPath(item.path);
-                  const active = isActiveNav(location.pathname, item.path);
-                  return (
-                    <Button
-                      key={`${item.label}-${item.path}`}
-                      component={external ? "a" : RouterLink}
-                      href={external ? item.path : undefined}
-                      to={external ? undefined : item.path}
-                      target={external ? "_blank" : undefined}
-                      rel={external ? "noreferrer" : undefined}
-                      sx={{
-                        borderRadius: 999,
-                        px: 1.4,
-                        fontWeight: active ? 700 : 500,
-                        backgroundColor: active
-                          ? alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.24 : 0.12)
-                          : "transparent",
-                        color: active ? "primary.main" : "text.primary",
-                        border: "1px solid transparent",
-                      }}
-                    >
-                      {item.label}
-                    </Button>
-                  );
-                })}
-
-                {isAuthenticated && user?.role === "admin" && (
-                  <Button
-                    component={RouterLink}
-                    to="/admin"
-                    sx={{
-                      color: "inherit",
-                      borderRadius: 999,
-                      px: 2,
-                      fontWeight: location.pathname.startsWith("/admin") ? 700 : 500,
-                      backgroundColor: location.pathname.startsWith("/admin") ? "action.selected" : "transparent",
-                    }}
-                  >
-                    后台
-                  </Button>
-                )}
-              </Stack>
-            </Box>
-
-            <Stack direction="row" spacing={0.8} alignItems="center">
-              <ToggleThemeButton />
-
-              {isLoading ? (
-                <ModernLoader size={20} />
-              ) : isAuthenticated ? (
-                <>
-                  <IconButton
-                    size="large"
-                    aria-label="用户菜单"
-                    aria-controls="user-menu"
-                    aria-haspopup="true"
-                    onClick={handleMenuOpen}
-                    color="inherit"
-                  >
-                    <Avatar src={user?.avatarUrl || undefined} alt={user?.username} sx={{ width: 32, height: 32 }}>
-                      {user?.username?.charAt(0).toUpperCase()}
-                    </Avatar>
-                  </IconButton>
-                  <Menu
-                    id="user-menu"
-                    anchorEl={anchorEl}
-                    open={Boolean(anchorEl)}
-                    onClose={handleMenuClose}
-                    transformOrigin={{ horizontal: "right", vertical: "top" }}
-                    anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-                  >
-                    {user?.role === "admin" && (
-                      <MenuItem onClick={handleMenuClose} component={RouterLink} to="/admin">
-                        <AdminPanelSettingsRounded sx={{ mr: 1 }} />
-                        后台
-                      </MenuItem>
-                    )}
-                    <MenuItem onClick={handleLogout}>
-                      <LogoutIcon sx={{ mr: 1 }} />
-                      登出
-                    </MenuItem>
-                  </Menu>
-                </>
-              ) : (
-                <Button onClick={login} startIcon={<GitHubIcon />} variant="outlined" sx={{ borderRadius: 999 }}>
-                  GitHub 登录
-                </Button>
-              )}
-            </Stack>
-          </Toolbar>
-        </Container>
-      </AppBar>
-      <Drawer
-        anchor="left"
-        open={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-        PaperProps={{
-          sx: {
-            width: 284,
-            p: 2,
-            borderTopRightRadius: 18,
-            borderBottomRightRadius: 18,
-            backgroundColor: theme.glass.background,
-            backdropFilter: "blur(22px) saturate(180%)",
-          },
-        }}
-      >
-        <Stack spacing={2}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Typography variant="h6" sx={{ fontWeight: 900 }}>
-              {siteConfig.navTitle}
-              {siteConfig.navSuffix}
-              {siteConfig.navAfter}
-            </Typography>
-            <IconButton aria-label="关闭导航" onClick={() => setMobileOpen(false)}>
-              <CloseRounded />
-            </IconButton>
-          </Stack>
-          <List sx={{ display: "grid", gap: 0.6 }}>
-            {navItems.map((item) => {
-              const external = isExternalPath(item.path);
-              const active = isActiveNav(location.pathname, item.path);
-              return (
-                <ListItemButton
-                  key={`${item.label}-${item.path}`}
-                  component={external ? "a" : RouterLink}
-                  href={external ? item.path : undefined}
-                  to={external ? undefined : item.path}
-                  target={external ? "_blank" : undefined}
-                  rel={external ? "noreferrer" : undefined}
-                  onClick={() => setMobileOpen(false)}
-                  sx={{
-                    borderRadius: 2,
-                    backgroundColor: active ? alpha(theme.palette.primary.main, 0.14) : "transparent",
-                    color: active ? "primary.main" : "text.primary",
+                <span>{user?.username?.slice(0, 1) || siteConfig.authorName.slice(0, 1)}</span>
+              </button>
+              {accountOpen && (
+                <div
+                  className="paper-card"
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 10px)",
+                    right: 0,
+                    width: 150,
+                    padding: 8,
+                    zIndex: 90,
                   }}
                 >
-                  <ListItemText
-                    primary={item.label}
-                    primaryTypographyProps={{ fontWeight: active ? 900 : 700 }}
-                  />
-                </ListItemButton>
-              );
-            })}
-            {isAuthenticated && user?.role === "admin" && (
-              <ListItemButton
-                component={RouterLink}
-                to="/admin"
-                onClick={() => setMobileOpen(false)}
-                sx={{ borderRadius: 2 }}
-              >
-                <ListItemText primary="后台" primaryTypographyProps={{ fontWeight: 700 }} />
-              </ListItemButton>
-            )}
-          </List>
-        </Stack>
-      </Drawer>
-      <Toolbar aria-hidden="true" sx={{ flexShrink: 0 }} />
-      <Box component="main" sx={{ flexGrow: 1, position: "relative", zIndex: 1, minWidth: 0 }}>
+                  {user?.role === "admin" && (
+                    <RouterLink className="button ghost" to="/admin" style={{ width: "100%" }}>
+                      内容工作台
+                    </RouterLink>
+                  )}
+                  <button
+                    className="button ghost"
+                    type="button"
+                    style={{ width: "100%", marginTop: 4 }}
+                    onClick={() => {
+                      logout();
+                      setAccountOpen(false);
+                    }}
+                  >
+                    退出登录
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <aside className={`mobile-drawer${mobileOpen ? " open" : ""}`} aria-hidden={!mobileOpen}>
+        <div className="drawer-head">
+          <span className="brand">
+            <span className="brand-mark">{siteConfig.authorName.slice(0, 1)}</span>
+            <strong>{siteConfig.title}</strong>
+          </span>
+          <button className="icon-button" type="button" aria-label="关闭菜单" onClick={() => setMobileOpen(false)}>
+            ×
+          </button>
+        </div>
+        <nav aria-label="移动端导航">
+          {navItems.map((item, index) => (
+            <RouterLink key={item.path} to={item.path}>
+              {item.label} <span>{String(index + 1).padStart(2, "0")}</span>
+            </RouterLink>
+          ))}
+          {user?.role === "admin" && (
+            <RouterLink to="/admin">
+              内容工作台 <span>↗</span>
+            </RouterLink>
+          )}
+        </nav>
+      </aside>
+      <button
+        className={`drawer-backdrop${mobileOpen ? " open" : ""}`}
+        type="button"
+        aria-label="关闭菜单"
+        onClick={() => setMobileOpen(false)}
+      />
+
+      <main id="app" tabIndex={-1}>
         <Outlet />
-      </Box>
-      {!isAdminRoute && <FloatingPlayer />}
+      </main>
       {!isAdminRoute && <Footer />}
-    </Box>
+      {!isAdminRoute && <FloatingPlayer />}
+    </>
   );
 }
-
-export default App;

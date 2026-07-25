@@ -3,6 +3,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as OriginalBrowserRouter } from "react-router-dom";
 import "uno.css";
+import "./prototype.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppThemeProvider } from "./context/ThemeContextProvider";
 import { MusicProvider } from "./context/MusicProvider";

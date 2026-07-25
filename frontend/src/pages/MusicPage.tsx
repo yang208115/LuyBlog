@@ -1,110 +1,93 @@
-import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
-import { ExpandMoreRounded, PauseRounded, PlayArrowRounded, SkipNextRounded } from "@mui/icons-material";
-import { glassPanelSx } from "../components/Glass";
-import { PublicPageLayout } from "../components/Layout";
+import { useMusic } from "../context/MusicProvider";
 import { LyricsView } from "../components/LyricsView";
-import { Track, useMusic } from "../context/MusicProvider";
-import { ModernLoader } from "../components/Loading";
-import { useEffect, useMemo, useState } from "react";
 
-type MusicCollection = { key: string; name: string; cover: string | null; tracks: Array<{ track: Track; index: number }> };
-
-function groupTracks(tracks: Track[]): MusicCollection[] {
-  if (!tracks.length) return [];
-  return [{
-    key: "all",
-    name: "播放列表",
-    cover: tracks.find((track) => track.cover)?.cover ?? null,
-    tracks: tracks.map((track, index) => ({ track, index })),
-  }];
+function formatTime(value: number) {
+  if (!Number.isFinite(value) || value < 0) return "00:00";
+  const minutes = Math.floor(value / 60);
+  const seconds = Math.floor(value % 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 export function MusicPage() {
   const music = useMusic();
-  const collections = useMemo(() => groupTracks(music.tracks), [music.tracks]);
-  const currentCollectionKey = collections.find((collection) => collection.tracks.some(({ index }) => index === music.index))?.key ?? null;
-  const [expandedCollection, setExpandedCollection] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (currentCollectionKey) setExpandedCollection(currentCollectionKey);
-  }, [currentCollectionKey]);
+  const progress = music.duration ? Math.min(100, (music.currentTime / music.duration) * 100) : 0;
 
   return (
-    <PublicPageLayout maxWidth="md" title="音乐" spacing={2.4}>
-      <Card variant="outlined" sx={glassPanelSx}>
-        <CardContent sx={{ p: { xs: 2.2, md: 3 } }}>
-          <Stack spacing={2}>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
-              {music.current.cover && (
-                <Box component="img" src={music.current.cover} alt={music.current.title} sx={{ width: 96, height: 96, objectFit: "cover", borderRadius: 2 }} />
-              )}
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="h5" sx={{ fontWeight: 900 }}>
-                  {music.current.title}
-                </Typography>
-                <Typography color="text.secondary">
-                  {music.current.artist || "未知歌手"}{music.current.album ? ` · ${music.current.album}` : ""}
-                </Typography>
-                <Stack direction="row" spacing={1} sx={{ mt: 1 }} useFlexGap flexWrap="wrap">
-                  <Chip size="small" label={music.current.url ? "链接播放" : "未配置链接"} color={music.current.url ? "success" : "warning"} />
-                </Stack>
-              </Box>
-            </Stack>
+    <div className="page-shell">
+      <header className="page-heading">
+        <div>
+          <span className="eyebrow">LISTENING ROOM / 音乐</span>
+          <h1>此刻正在播放</h1>
+          <p>有些记忆不按日期归档，它们住在一首歌里。</p>
+        </div>
+      </header>
 
-            {music.error && <Alert severity="warning">{music.error}</Alert>}
-            {music.loading && <ModernLoader size={24} />}
-            <LyricsView lyric={music.current.lyric} currentTime={music.currentTime} onSeek={music.seek} />
-
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <Button variant="contained" startIcon={music.playing ? <PauseRounded /> : <PlayArrowRounded />} onClick={music.toggle} sx={{ borderRadius: 999 }}>
-                {music.playing ? "暂停" : "播放"}
-              </Button>
-              <Button startIcon={<SkipNextRounded />} onClick={music.next} sx={{ borderRadius: 999 }}>
-                下一首
-              </Button>
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      <Stack spacing={1.5}>
-        {collections.map((collection) => (
-          <Accordion
-            key={collection.key}
-            expanded={expandedCollection === collection.key}
-            onChange={(_, expanded) => setExpandedCollection(expanded ? collection.key : null)}
-            disableGutters
-            sx={{ ...glassPanelSx, overflow: "hidden", "&:before": { display: "none" } }}
+      <div className="music-layout">
+        <div className="album-stage">
+          <div
+            className={`record${music.playing ? " playing" : ""}`}
+            style={music.current.cover ? { backgroundImage: `url(${music.current.cover})` } : undefined}
           >
-            <AccordionSummary expandIcon={<ExpandMoreRounded />}>
-              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, width: "100%" }}>
-                {collection.cover && <Box component="img" src={collection.cover} alt={collection.name} sx={{ width: 56, height: 56, objectFit: "cover", borderRadius: 1.5, flexShrink: 0 }} />}
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography sx={{ fontWeight: 900 }} noWrap>{collection.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">{collection.tracks.length} 首歌</Typography>
-                </Box>
-              </Stack>
-            </AccordionSummary>
-            <AccordionDetails sx={{ pt: 0 }}>
-              <Stack spacing={0.8}>
-                {collection.tracks.map(({ track, index }) => (
-                  <Box key={track.id} onClick={() => music.select(index)} sx={{ p: 1, borderRadius: 1.5, cursor: "pointer", bgcolor: index === music.index ? "action.selected" : "transparent", "&:hover": { bgcolor: "action.hover" } }}>
-                    <Stack direction="row" spacing={1.2} alignItems="center">
-                      {track.cover && <Box component="img" src={track.cover} alt={track.title} sx={{ width: 42, height: 42, objectFit: "cover", borderRadius: 1.2, flexShrink: 0 }} />}
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography sx={{ fontWeight: 800 }} noWrap>{track.title}</Typography>
-                        <Typography variant="body2" color="text.secondary" noWrap>
-                          {track.artist || "未知歌手"}{track.album ? ` · ${track.album}` : ""}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Box>
-                ))}
-              </Stack>
-            </AccordionDetails>
-          </Accordion>
+          </div>
+        </div>
+        <section className="lyrics-panel">
+          <span className="eyebrow">TRACK {String(music.index + 1).padStart(2, "0")}</span>
+          <h2 className="track-title">{music.current.title}</h2>
+          <span>{music.current.artist || "未知歌手"}</span>
+          <div className="lyrics">
+            <LyricsView lyric={music.current.lyric} currentTime={music.currentTime} onSeek={music.seek} />
+          </div>
+          <div className="progress">
+            <span style={{ width: `${progress}%` }} />
+          </div>
+          <div className="player-controls">
+            <span className="note-date">
+              {formatTime(music.currentTime)} / {formatTime(music.duration)}
+            </span>
+            <div>
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="上一首"
+                onClick={() => music.select((music.index - 1 + music.tracks.length) % music.tracks.length)}
+              >
+                ↞
+              </button>{" "}
+              <button className="button primary" type="button" onClick={music.toggle}>
+                {music.playing ? "暂停" : "播放"}
+              </button>{" "}
+              <button className="icon-button" type="button" aria-label="下一首" onClick={music.next}>
+                ↠
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section className="playlist">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">QUEUE</span>
+            <h2>播放列表</h2>
+          </div>
+        </div>
+        {music.tracks.map((track, index) => (
+          <button
+            className={`playlist-row${index === music.index ? " active" : ""}`}
+            type="button"
+            onClick={() => music.select(index)}
+            key={track.id}
+          >
+            <span className="note-date">{String(index + 1).padStart(2, "0")}</span>
+            <span>
+              <strong>{track.title}</strong>
+              <small className="cell-sub">{track.artist || "未知歌手"}</small>
+            </span>
+            <span>{track.album || "SINGLE"}</span>
+            <span>↗</span>
+          </button>
         ))}
-      </Stack>
-    </PublicPageLayout>
+      </section>
+    </div>
   );
 }

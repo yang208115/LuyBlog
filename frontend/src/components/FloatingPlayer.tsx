@@ -1,146 +1,51 @@
-import { Box, IconButton, Paper, Stack, Typography } from "@mui/material";
-import { PauseRounded, PlayArrowRounded, SkipNextRounded } from "@mui/icons-material";
-import { alpha, useTheme } from "@mui/material/styles";
 import { useLocation, Link as RouterLink } from "react-router-dom";
 import { useMusic } from "../context/MusicProvider";
-import { calculateLineProgress, findActiveLineIndex, KaraokeText, parseLrc } from "./LyricsView";
 
 export function FloatingPlayer() {
   const location = useLocation();
   const music = useMusic();
-  const theme = useTheme();
+
   if (location.pathname === "/music" || location.pathname.startsWith("/admin")) return null;
 
-  const lyricLines = parseLrc(music.current.lyric);
-  const activeLyricIndex = findActiveLineIndex(lyricLines, music.currentTime);
-  const activeLyric =
-    lyricLines[activeLyricIndex]?.texts[0] ||
-    (lyricLines.length ? "♪" : "") ||
-    music.current.lyric ||
-    music.current.artist ||
-    "暂无歌词";
-  const activeLyricProgress = activeLyricIndex >= 0
-    ? calculateLineProgress(lyricLines, activeLyricIndex, music.currentTime)
-    : undefined;
-
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        position: "fixed",
-        left: { xs: 16, md: 36 },
-        bottom: { xs: 76, md: 96 },
-        zIndex: 1200,
-        borderRadius: 4,
-        p: { xs: 1.5, sm: 2 },
-        width: { xs: 150, sm: 200 },
-        height: { xs: 150, sm: 200 },
-        backdropFilter: "blur(20px) saturate(180%)",
-        WebkitBackdropFilter: "blur(20px) saturate(180%)",
-        bgcolor: alpha(theme.palette.background.paper, theme.palette.mode === "dark" ? 0.48 : 0.62),
-        border: `1px solid ${alpha(theme.palette.common.white, theme.palette.mode === "dark" ? 0.16 : 0.46)}`,
-        boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <Stack direction="row" spacing={1.5} alignItems="center">
+    <section className="mini-player" aria-label="迷你音乐播放器">
+      <RouterLink className="mini-cover" to="/music" aria-label="打开音乐页面">
         {music.current.cover ? (
-          <Box
-            component="img"
-            src={music.current.cover}
-            alt={music.current.title}
-            sx={{
-              width: { xs: 40, sm: 50 },
-              height: { xs: 40, sm: 50 },
-              borderRadius: "50%",
-              objectFit: "cover",
-              flexShrink: 0,
-              animation: music.playing ? "luy-cover-spin 10s linear infinite" : "none",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              "@keyframes luy-cover-spin": {
-                "0%": { transform: "rotate(0deg)" },
-                "100%": { transform: "rotate(360deg)" },
-              },
-            }}
-          />
+          <img src={music.current.cover} alt={`${music.current.title}封面`} />
         ) : (
-          <Box
-            sx={{
-              width: { xs: 40, sm: 50 },
-              height: { xs: 40, sm: 50 },
-              borderRadius: "50%",
-              flexShrink: 0,
-              display: "grid",
-              placeItems: "center",
-              fontWeight: 900,
-              color: "primary.main",
-              background: alpha(theme.palette.primary.main, 0.12),
-            }}
-          >
-            ♪
-          </Box>
+          <span aria-hidden="true">♫</span>
         )}
-        <Box component={RouterLink} to="/music" sx={{ minWidth: 0, color: "inherit", textDecoration: "none" }}>
-          <Typography variant="subtitle2" noWrap sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-            {music.current.title}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block", mt: 0.2, fontWeight: 500 }}>
-            {music.current.artist || "Cloud Music"}
-          </Typography>
-        </Box>
-      </Stack>
-
-      <Box
-        component={RouterLink}
-        to="/music"
-        sx={{
-          flex: 1,
-          mt: 1.5,
-          color: "inherit",
-          textDecoration: "none",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-        }}
-      >
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-            lineHeight: 1.5,
-            fontWeight: 600,
-          }}
-        >
-          {music.error || <KaraokeText text={activeLyric} progress={activeLyricProgress} />}
-        </Typography>
-      </Box>
-
-      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ mt: 1 }}>
-        <IconButton
+      </RouterLink>
+      <RouterLink className="mini-track" to="/music">
+        <small>NOW PLAYING</small>
+        <strong>{music.current.title}</strong>
+        <span>{music.current.artist || "Cloud Music"}</span>
+      </RouterLink>
+      <div className="mini-controls">
+        <button
+          className="mini-control primary"
+          type="button"
+          aria-label={music.playing ? "暂停音乐" : "播放音乐"}
           onClick={music.toggle}
-          aria-label={music.playing ? "暂停" : "播放"}
-          sx={{
-            bgcolor: "primary.main",
-            color: "primary.contrastText",
-            width: 38,
-            height: 38,
-            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`,
-            "&:hover": { bgcolor: "primary.dark" },
-          }}
         >
-          {music.playing ? <PauseRounded fontSize="small" /> : <PlayArrowRounded fontSize="small" />}
-        </IconButton>
-        <IconButton size="small" onClick={music.next} aria-label="下一首" sx={{ color: "text.secondary" }}>
-          <SkipNextRounded fontSize="small" />
-        </IconButton>
-      </Stack>
-    </Paper>
+          {music.playing ? (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="6.5" y="5" width="4" height="14" rx="1" />
+              <rect x="13.5" y="5" width="4" height="14" rx="1" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5.6v12.8a1 1 0 0 0 1.54.84l9.1-6.4a1 1 0 0 0 0-1.68l-9.1-6.4A1 1 0 0 0 8 5.6Z" />
+            </svg>
+          )}
+        </button>
+        <button className="mini-control" type="button" aria-label="下一首" onClick={music.next}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5.5 6.2v11.6a1 1 0 0 0 1.55.83l8.1-5.8a1 1 0 0 0 0-1.62l-8.1-5.82a1 1 0 0 0-1.55.81Z" />
+            <rect x="17" y="6" width="2" height="12" rx="1" />
+          </svg>
+        </button>
+      </div>
+    </section>
   );
 }

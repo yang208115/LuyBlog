@@ -11,6 +11,7 @@ export type SiteConfig = {
   defaultPostCover: string;
   social: {
     github: string;
+    demo: string;
     gitee: string;
     google: string;
     email: string;
@@ -54,6 +55,7 @@ export const defaultSiteConfig: SiteConfig = {
 
   social: {
     github: "https://github.com/yang208115",
+    demo: "https://edge.nekro.ai",
     gitee: "",
     google: "",
     email: "a3305587173@outlook.com",

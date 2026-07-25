@@ -38,6 +38,7 @@ type MusicContextValue = {
 };
 
 const MusicContext = createContext<MusicContextValue | null>(null);
+const DEFAULT_VOLUME = 0.13;
 
 async function fetchTracks(): Promise<Track[]> {
   const response = await fetch("/api/music/tracks");
@@ -60,6 +61,7 @@ function shuffleTracks(items: Track[]) {
 
 export function MusicProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const autoplayAttemptedRef = useRef(false);
   const [tracks, setTracks] = useState<Track[]>(fallbackTracks);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -97,6 +99,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       setPlaying(false);
       return;
     }
+    audio.volume = DEFAULT_VOLUME;
     try {
       await audio.play();
       setPlaying(true);
@@ -150,9 +153,56 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    audio.volume = DEFAULT_VOLUME;
     audio.load();
     if (playing) void play();
   }, [current.url]);
+
+  useEffect(() => {
+    if (loading || autoplayAttemptedRef.current || !current.url) return;
+    autoplayAttemptedRef.current = true;
+
+    let cancelled = false;
+    let listeningForGesture = false;
+
+    const removeGestureListeners = () => {
+      window.removeEventListener("pointerdown", playAfterGesture);
+      window.removeEventListener("keydown", playAfterGesture);
+      window.removeEventListener("touchstart", playAfterGesture);
+      listeningForGesture = false;
+    };
+
+    const attemptPlay = async () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.volume = DEFAULT_VOLUME;
+      await audio.play();
+      if (cancelled) return;
+      setPlaying(true);
+      setError(null);
+    };
+
+    function playAfterGesture() {
+      removeGestureListeners();
+      void attemptPlay().catch(() => {
+        if (!cancelled) setPlaying(false);
+      });
+    }
+
+    void attemptPlay().catch(() => {
+      if (cancelled) return;
+      setPlaying(false);
+      listeningForGesture = true;
+      window.addEventListener("pointerdown", playAfterGesture, { once: true });
+      window.addEventListener("keydown", playAfterGesture, { once: true });
+      window.addEventListener("touchstart", playAfterGesture, { once: true });
+    });
+
+    return () => {
+      cancelled = true;
+      if (listeningForGesture) removeGestureListeners();
+    };
+  }, [current.url, loading]);
 
   return (
     <MusicContext.Provider value={value}>
@@ -166,7 +216,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         }}
         onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
         onLoadedMetadata={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
-        preload="none"
+        preload="auto"
       />
       {children}
     </MusicContext.Provider>

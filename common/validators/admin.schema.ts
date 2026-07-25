@@ -148,6 +148,7 @@ export const SiteConfigSchema = z.object({
   defaultPostCover: z.string().trim().max(1000),
   social: z.object({
     github: z.string().trim().max(1000),
+    demo: z.string().trim().max(1000),
     gitee: z.string().trim().max(1000),
     google: z.string().trim().max(1000),
     email: z.string().trim().max(200),

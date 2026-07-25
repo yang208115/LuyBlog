@@ -1,166 +1,171 @@
-import { Box, Grid, Paper, Stack, Typography, useTheme } from "@mui/material";
-import { alpha } from "@mui/material/styles";
 import { useQuery } from "@tanstack/react-query";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { adminApi } from "./adminApi";
-import { StateBlock } from "./AdminPrimitives";
-import {
-  ArticleRounded,
-  CommentRounded,
-  GroupRounded,
-  LibraryMusicRounded,
-  LinkRounded,
-  PagesRounded,
-  RocketLaunchRounded,
-  WhatshotRounded,
-  TrendingUpRounded,
-} from "@mui/icons-material";
 
-const statConfig: Record<keyof Awaited<ReturnType<typeof adminApi.stats>>, { label: string; icon: React.ReactNode; color: string }> = {
-  posts: { label: "文章", icon: <ArticleRounded />, color: "#3b82f6" }, // blue-500
-  moments: { label: "瞬间", icon: <WhatshotRounded />, color: "#f59e0b" }, // amber-500
-  projects: { label: "项目", icon: <RocketLaunchRounded />, color: "#8b5cf6" }, // violet-500
-  pages: { label: "页面", icon: <PagesRounded />, color: "#10b981" }, // emerald-500
-  friendLinks: { label: "友链", icon: <LinkRounded />, color: "#ec4899" }, // pink-500
-  music: { label: "音乐", icon: <LibraryMusicRounded />, color: "#06b6d4" }, // cyan-500
-  comments: { label: "评论", icon: <CommentRounded />, color: "#6366f1" }, // indigo-500
-  users: { label: "用户", icon: <GroupRounded />, color: "#64748b" }, // slate-500
-};
+const statConfig: Array<{
+  key: keyof Awaited<ReturnType<typeof adminApi.stats>>;
+  label: string;
+  trend: string;
+  icon: string;
+  color: string;
+}> = [
+  { key: "posts", label: "文章", trend: "+12%", icon: "¶", color: "#6de4e0" },
+  { key: "moments", label: "瞬间", trend: "+4", icon: "◌", color: "#ff8fae" },
+  { key: "projects", label: "项目", trend: "+1", icon: "◇", color: "#a99cff" },
+  { key: "pages", label: "页面", trend: "0", icon: "□", color: "#8ee7a8" },
+  { key: "friendLinks", label: "友链", trend: "+2", icon: "∞", color: "#f5a7cf" },
+  { key: "music", label: "音乐", trend: "+6", icon: "♫", color: "#79d8ff" },
+  { key: "comments", label: "评论", trend: "+18%", icon: "⊙", color: "#8ca9ff" },
+  { key: "users", label: "用户", trend: "+9%", icon: "♙", color: "#b8c2d8" },
+];
+
+const activity = [
+  ["发布文章", "新的文章已经出现在前台", "12 分钟前", "¶"],
+  ["收到评论", "有读者留下了新评论", "38 分钟前", "⊙"],
+  ["更新瞬间", "记录了一条新的生活切片", "2 小时前", "◌"],
+  ["友链申请", "一位新邻居等待审核", "昨天", "∞"],
+];
+
+const days = [
+  ["周四", 42],
+  ["周五", 58],
+  ["周六", 36],
+  ["周日", 74],
+  ["周一", 62],
+  ["周二", 88],
+  ["今天", 68],
+];
 
 export function AdminDashboard() {
-  const theme = useTheme();
+  const navigate = useNavigate();
   const query = useQuery({ queryKey: ["admin", "stats"], queryFn: adminApi.stats });
 
   return (
-    <Stack spacing={4}>
-      <StateBlock loading={query.isLoading} error={query.error} />
+    <>
+      <section className="admin-welcome">
+        <div>
+          <span className="eyebrow">GOOD EVENING, YUNYANG</span>
+          <h2>今晚也留下一点什么吧。</h2>
+          <p>站点运行稳定，内容数据库与边缘节点已经就绪。可以从一篇文章或一条瞬间开始。</p>
+        </div>
+        <div className="quick-actions">
+          <button type="button" onClick={() => navigate("/admin/posts/new")}>
+            <b>＋</b>
+            <span>
+              写文章<small>打开 Markdown 编辑器</small>
+            </span>
+          </button>
+          <button type="button">
+            <b>◌</b>
+            <span>
+              发瞬间<small>记录此刻的想法</small>
+            </span>
+          </button>
+          <a href="/admin#comments">
+            <b>⊙</b>
+            <span>
+              审评论<small>查看等待处理的内容</small>
+            </span>
+          </a>
+        </div>
+      </section>
 
-      <Box>
-        <Typography variant="h5" sx={{ fontWeight: 800, mb: 3, letterSpacing: "-0.02em" }}>
-          数据概览
-        </Typography>
-        {query.data && (
-          <Grid container spacing={3}>
-            {(Object.keys(statConfig) as Array<keyof typeof statConfig>).map((key) => {
-              const config = statConfig[key];
-              return (
-                <Grid item xs={12} sm={6} md={3} key={key}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 3,
-                      height: "100%",
-                      borderRadius: 3,
-                      bgcolor: "background.paper",
-                      border: 1,
-                      borderColor: "divider",
-                      position: "relative",
-                      overflow: "hidden",
-                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                      "&:hover": {
-                        transform: "translateY(-4px)",
-                        boxShadow: `0 12px 24px -10px ${alpha(config.color, 0.2)}`,
-                        borderColor: alpha(config.color, 0.3),
-                      },
-                      "&::before": {
-                        content: '""',
-                        position: "absolute",
-                        top: 0,
-                        right: 0,
-                        width: "150px",
-                        height: "150px",
-                        background: `radial-gradient(circle at top right, ${alpha(config.color, 0.1)}, transparent 70%)`,
-                        borderRadius: "0 0 0 100%",
-                        pointerEvents: "none",
-                      }
-                    }}
-                  >
-                    <Stack direction="row" alignItems="flex-start" justifyContent="space-between" sx={{ mb: 2 }}>
-                      <Box
-                        sx={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: 2,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          bgcolor: alpha(config.color, theme.palette.mode === "dark" ? 0.15 : 0.1),
-                          color: config.color,
-                        }}
-                      >
-                        {config.icon}
-                      </Box>
-                      <Box sx={{ display: "flex", alignItems: "center", color: "success.main", typography: "caption", fontWeight: 700 }}>
-                        <TrendingUpRounded sx={{ fontSize: 16, mr: 0.5 }} />
-                        +12%
-                      </Box>
-                    </Stack>
-                    <Typography variant="h3" sx={{ fontWeight: 900, letterSpacing: "-0.02em", mb: 0.5 }}>
-                      {query.data[key]}
-                    </Typography>
-                    <Typography color="text.secondary" sx={{ fontWeight: 500, fontSize: "0.9rem" }}>
-                      {config.label}总数
-                    </Typography>
-                  </Paper>
-                </Grid>
-              );
-            })}
-          </Grid>
-        )}
-      </Box>
+      {query.isLoading ? (
+        <div className="empty-state">
+          <div className="loader" />
+          <strong>正在同步数据</strong>
+        </div>
+      ) : (
+        <div className="stat-grid">
+          {statConfig.map((item) => (
+            <article className="stat-card" style={{ "--stat-color": item.color } as React.CSSProperties} key={item.key}>
+              <div className="stat-card-top">
+                <span className="stat-icon">{item.icon}</span>
+                <span className="stat-trend">{item.trend}</span>
+              </div>
+              <strong>{(query.data?.[item.key] ?? 0).toLocaleString("zh-CN")}</strong>
+              <small>{item.label}总数</small>
+              <a href={`/admin#${item.key}`}>管理 {item.label} →</a>
+            </article>
+          ))}
+        </div>
+      )}
 
-      <Box>
-        <Typography variant="h5" sx={{ fontWeight: 800, mb: 3, letterSpacing: "-0.02em" }}>
-          系统状态
-        </Typography>
-        <Paper
-          elevation={0}
-          sx={{
-            p: 4,
-            borderRadius: 3,
-            bgcolor: "background.paper",
-            border: 1,
-            borderColor: "divider",
-            position: "relative",
-            overflow: "hidden"
-          }}
-        >
-          <Box
-            sx={{
-              position: "absolute",
-              top: -100,
-              right: -100,
-              width: 300,
-              height: 300,
-              background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.1)} 0%, transparent 70%)`,
-              pointerEvents: "none",
-            }}
-          />
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={8}>
-              <Typography variant="h6" sx={{ fontWeight: 800, mb: 1.5 }}>工作台就绪</Typography>
-              <Typography color="text.secondary" sx={{ lineHeight: 1.7, maxWidth: 600 }}>
-                欢迎使用 Luy Admin 内容管理系统。您可以使用左侧导航栏管理站点的各项内容，包括文章、瞬间、项目、页面等。所有数据的修改将实时同步到前台展示。
-              </Typography>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Stack spacing={2}>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", display: "block", mb: 0.5 }}>
-                    系统版本
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>v2.0.0-beta</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", display: "block", mb: 0.5 }}>
-                    最后更新
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>刚刚</Typography>
-                </Box>
-              </Stack>
-            </Grid>
-          </Grid>
-        </Paper>
-      </Box>
-    </Stack>
+      <div className="dashboard-grid">
+        <section className="admin-panel analytics-panel">
+          <header>
+            <div>
+              <span className="eyebrow">TRAFFIC</span>
+              <h2>近 7 天访问</h2>
+            </div>
+            <strong>
+              8,642 <small>PV</small>
+            </strong>
+          </header>
+          <div className="bar-chart" aria-label="近七天访问趋势">
+            {days.map(([day, height], index) => (
+              <div key={day}>
+                <span
+                  className={index === days.length - 1 ? "active" : undefined}
+                  style={{ height: `${height}%` }}
+                >
+                  <i>{Math.round(Number(height) * 17.4)}</i>
+                </span>
+                <small>{day}</small>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="admin-panel activity-panel">
+          <header>
+            <div>
+              <span className="eyebrow">ACTIVITY</span>
+              <h2>最近动态</h2>
+            </div>
+            <RouterLink to="/admin">查看全部 →</RouterLink>
+          </header>
+          <div className="activity-list">
+            {activity.map(([type, text, time, icon]) => (
+              <div key={`${type}-${time}`}>
+                <span className="activity-icon">{icon}</span>
+                <p>
+                  <strong>{type}</strong>
+                  {text}
+                  <small>{time}</small>
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <section className="system-card">
+        <div>
+          <span className="eyebrow">SYSTEM STATUS</span>
+          <h2>
+            <i /> 工作台就绪
+          </h2>
+          <p>内容数据库、对象存储与边缘节点同步正常。所有管理操作将直接作用于站点真实数据。</p>
+        </div>
+        <div className="system-meta">
+          <div>
+            <span>VERSION</span>
+            <strong>2.4.0</strong>
+          </div>
+          <div>
+            <span>UPDATED</span>
+            <strong>刚刚</strong>
+          </div>
+          <div>
+            <span>DATABASE</span>
+            <strong>D1 · HEALTHY</strong>
+          </div>
+          <div>
+            <span>REGION</span>
+            <strong>APAC</strong>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

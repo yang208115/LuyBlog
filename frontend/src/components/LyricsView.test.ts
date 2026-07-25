@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { calculateLineProgress, parseLrc } from "./LyricsView";
+import {
+  calculateLineProgress,
+  findActiveLineIndex,
+  parseLrc,
+} from "./LyricsView";
 
 describe("parseLrc", () => {
   it("treats escaped newline markers as real line breaks", () => {
@@ -23,5 +27,13 @@ describe("parseLrc", () => {
 
     expect(calculateLineProgress(shortLine, 0, 3)).toBe(1);
     expect(calculateLineProgress(longLine, 0, 3)).toBeLessThan(1);
+  });
+
+  it("finishes the previous line before switching to the next one", () => {
+    const lines = parseLrc("[00:01.00]上一句\n[00:05.00]下一句");
+
+    expect(calculateLineProgress(lines, 0, 5)).toBe(1);
+    expect(findActiveLineIndex(lines, 5.1)).toBe(0);
+    expect(findActiveLineIndex(lines, 5.2)).toBe(1);
   });
 });
