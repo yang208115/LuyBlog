@@ -1,14 +1,14 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">LuyBlog icon</title>
   <desc id="desc">A refined minimalist LuyBlog wordmark icon with a simple notebook line mark.</desc>
-  <rect x="48" y="48" width="416" height="416" rx="112" fill="#FAFAF8"/>
+  <rect x="28" y="28" width="456" height="456" rx="112" fill="#FAFAF8"/>
 
-  <path d="M166 168C166 157.507 174.507 149 185 149H327C337.493 149 346 157.507 346 168V268C346 278.493 337.493 287 327 287H185C174.507 287 166 278.493 166 268V168Z" fill="#FFFFFF"/>
-  <path d="M190 190H322" stroke="#18181B" stroke-width="12" stroke-linecap="round"/>
-  <path d="M190 226H286" stroke="#18181B" stroke-width="12" stroke-linecap="round"/>
-  <path d="M190 262H250" stroke="#18181B" stroke-width="12" stroke-linecap="round"/>
-  <path d="M152 322H360" stroke="#18181B" stroke-width="12" stroke-linecap="round"/>
-  <path d="M328 322H360" stroke="#22C8A9" stroke-width="12" stroke-linecap="round"/>
+  <path d="M128 132C128 119.85 137.85 110 150 110H362C374.15 110 384 119.85 384 132V275C384 287.15 374.15 297 362 297H150C137.85 297 128 287.15 128 275V132Z" fill="#FFFFFF"/>
+  <path d="M160 158H352" stroke="#18181B" stroke-width="14" stroke-linecap="round"/>
+  <path d="M160 207H306" stroke="#18181B" stroke-width="14" stroke-linecap="round"/>
+  <path d="M160 256H258" stroke="#18181B" stroke-width="14" stroke-linecap="round"/>
+  <path d="M112 330H400" stroke="#18181B" stroke-width="14" stroke-linecap="round"/>
+  <path d="M348 330H400" stroke="#22C8A9" stroke-width="14" stroke-linecap="round"/>
 
-  <text x="256" y="394" text-anchor="middle" fill="#18181B" font-family="Inter, 'SF Pro Display', 'Segoe UI', Arial, sans-serif" font-size="60" font-weight="500">LuyBlog</text>
+  <text x="256" y="425" text-anchor="middle" fill="#18181B" font-family="Inter, 'SF Pro Display', 'Segoe UI', Arial, sans-serif" font-size="74" font-weight="500">LuyBlog</text>
 </svg>
