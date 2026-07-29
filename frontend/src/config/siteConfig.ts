@@ -37,7 +37,7 @@ export const defaultAiSystemPrompt =
 
 export const defaultSiteConfig: SiteConfig = {
   title: "运阳的小窝",
-  faviconUrl: "https://avatars.githubusercontent.com/u/132762661?v=4",
+  faviconUrl: "/luyblog-icon.svg",
   authorName: "运阳",
   bio: "在代码与部署之间穿梭的开发者，热爱构建稳定、优雅、可维护的产品。",
 
