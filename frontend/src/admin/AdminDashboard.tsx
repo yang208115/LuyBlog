@@ -14,7 +14,6 @@ const statConfig: Array<{
   { key: "projects", label: "项目", trend: "+1", icon: "◇", color: "#a99cff" },
   { key: "pages", label: "页面", trend: "0", icon: "□", color: "#8ee7a8" },
   { key: "friendLinks", label: "友链", trend: "+2", icon: "∞", color: "#f5a7cf" },
-  { key: "music", label: "音乐", trend: "+6", icon: "♫", color: "#79d8ff" },
   { key: "comments", label: "评论", trend: "+18%", icon: "⊙", color: "#8ca9ff" },
   { key: "users", label: "用户", trend: "+9%", icon: "♙", color: "#b8c2d8" },
 ];

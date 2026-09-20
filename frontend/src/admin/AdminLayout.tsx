@@ -11,7 +11,6 @@ export type AdminSection =
   | "projects"
   | "pages"
   | "friends"
-  | "music"
   | "comments"
   | "users";
 
@@ -24,7 +23,6 @@ export const adminSections: Array<{ key: AdminSection; title: string; icon: stri
   { key: "projects", title: "项目", icon: "◇" },
   { key: "pages", title: "页面", icon: "□" },
   { key: "friends", title: "友链", icon: "∞" },
-  { key: "music", title: "音乐", icon: "♫" },
   { key: "comments", title: "评论", icon: "⊙" },
   { key: "users", title: "用户", icon: "♙" },
 ];

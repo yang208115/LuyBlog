@@ -3,7 +3,6 @@ import ReactDOMServer from "react-dom/server";
 import { StaticRouter } from "react-router-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppThemeProvider } from "./context/ThemeContextProvider";
-import { MusicProvider } from "./context/MusicProvider";
 import { SiteConfigProvider } from "./context/SiteConfigProvider";
 import { AppRoutes } from "./routes";
 
@@ -28,11 +27,9 @@ export function render(path: string) {
       <QueryClientProvider client={queryClient}>
         <SiteConfigProvider>
           <AppThemeProvider>
-            <MusicProvider>
-              <StaticRouter location={path}>
-                <AppRoutes />
-              </StaticRouter>
-            </MusicProvider>
+            <StaticRouter location={path}>
+              <AppRoutes />
+            </StaticRouter>
           </AppThemeProvider>
         </SiteConfigProvider>
       </QueryClientProvider>

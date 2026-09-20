@@ -2,12 +2,11 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
-import { comments, friendLinks, moments, musicTracks, navItems, pages, posts, projects, users } from "../db/schema";
+import { comments, friendLinks, moments, navItems, pages, posts, projects, users } from "../db/schema";
 import {
   CreateNavItemSchema,
   CreateFriendLinkSchema,
   CreateMomentSchema,
-  CreateMusicTrackSchema,
   CreatePageSchema,
   CreatePostSchema,
   CreateProjectSchema,
@@ -15,7 +14,6 @@ import {
   UpdateCommentStatusSchema,
   UpdateFriendLinkSchema,
   UpdateMomentSchema,
-  UpdateMusicTrackSchema,
   UpdateNavItemSchema,
   UpdatePageSchema,
   UpdatePostSchema,
@@ -58,13 +56,12 @@ function iso(date: Date | null): string | null {
 
 app.get("/stats", async (c) => {
   const db = c.get("db");
-  const [postCount, momentCount, projectCount, pageCount, friendLinkCount, musicCount, commentCount, userCount] = await Promise.all([
+  const [postCount, momentCount, projectCount, pageCount, friendLinkCount, commentCount, userCount] = await Promise.all([
     db.select({ count: sql<number>`count(*)` }).from(posts).get(),
     db.select({ count: sql<number>`count(*)` }).from(moments).get(),
     db.select({ count: sql<number>`count(*)` }).from(projects).get(),
     db.select({ count: sql<number>`count(*)` }).from(pages).get(),
     db.select({ count: sql<number>`count(*)` }).from(friendLinks).get(),
-    db.select({ count: sql<number>`count(*)` }).from(musicTracks).get(),
     db.select({ count: sql<number>`count(*)` }).from(comments).get(),
     db.select({ count: sql<number>`count(*)` }).from(users).get(),
   ]);
@@ -74,7 +71,6 @@ app.get("/stats", async (c) => {
     projects: Number(projectCount?.count ?? 0),
     pages: Number(pageCount?.count ?? 0),
     friendLinks: Number(friendLinkCount?.count ?? 0),
-    music: Number(musicCount?.count ?? 0),
     comments: Number(commentCount?.count ?? 0),
     users: Number(userCount?.count ?? 0),
   });
@@ -620,60 +616,6 @@ app.get("/users", async (c) => {
   const totalRow = await db.select({ count: sql<number>`count(*)` }).from(users).get();
 
   return c.json({ items: rows, pagination: { page, pageSize, total: Number(totalRow?.count ?? 0) } });
-});
-
-app.get("/music-tracks", async (c) => {
-  const db = c.get("db");
-  const rows = await db.select().from(musicTracks).orderBy(musicTracks.sortOrder, desc(musicTracks.updatedAt));
-  return c.json({
-    items: rows.map((row) => ({
-      ...row,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-    })),
-  });
-});
-
-app.post("/music-tracks", async (c) => {
-  const db = c.get("db");
-  const parsed = CreateMusicTrackSchema.safeParse(await c.req.json());
-  if (!parsed.success) return c.json({ code: 400, message: "歌曲参数不合法" }, 400);
-
-  const [created] = await db
-    .insert(musicTracks)
-    .values({
-      ...parsed.data,
-      updatedAt: new Date(),
-    })
-    .returning();
-  return c.json(created);
-});
-
-app.patch("/music-tracks/:id", async (c) => {
-  const db = c.get("db");
-  const id = c.req.param("id");
-  const parsed = UpdateMusicTrackSchema.safeParse(await c.req.json());
-  if (!parsed.success) return c.json({ code: 400, message: "歌曲参数不合法" }, 400);
-
-  const existing = await db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
-  if (!existing) return c.json({ code: 404, message: "歌曲不存在" }, 404);
-
-  const [updated] = await db
-    .update(musicTracks)
-    .set({
-      ...parsed.data,
-      updatedAt: new Date(),
-    })
-    .where(eq(musicTracks.id, id))
-    .returning();
-  return c.json(updated);
-});
-
-app.delete("/music-tracks/:id", async (c) => {
-  const db = c.get("db");
-  const id = c.req.param("id");
-  await db.delete(musicTracks).where(eq(musicTracks.id, id));
-  return c.json({ success: true });
 });
 
 app.patch("/users/:id/role", async (c) => {

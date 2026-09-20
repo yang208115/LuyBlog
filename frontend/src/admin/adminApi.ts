@@ -9,7 +9,6 @@ export type AdminStats = {
   projects: number;
   pages: number;
   friendLinks: number;
-  music: number;
   comments: number;
   users: number;
 };
@@ -132,19 +131,6 @@ export type AdminUser = {
   status: "active" | "banned";
 };
 
-export type AdminMusicTrack = {
-  id: string;
-  url: string;
-  title: string;
-  artist: string | null;
-  album: string | null;
-  cover: string | null;
-  lyric: string | null;
-  sortOrder: number;
-  status: "enabled" | "disabled";
-  updatedAt: string;
-};
-
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetchWithAuth(url, init);
   if (!response.ok) {
@@ -202,10 +188,6 @@ export const adminApi = {
   updateNavItem: (id: string, body: Partial<Omit<AdminNavItem, "id" | "updatedAt">>) => request<AdminNavItem>(`/api/admin/nav-items/${id}`, json("PATCH", body)),
   reorderNavItems: (ids: string[]) => request<{ success: true }>("/api/admin/nav-items/reorder", json("PATCH", { ids })),
   deleteNavItem: (id: string) => request<{ success: true }>(`/api/admin/nav-items/${id}`, { method: "DELETE" }),
-  music: () => request<ListResponse<AdminMusicTrack>>("/api/admin/music-tracks"),
-  createMusic: (body: Omit<AdminMusicTrack, "id" | "updatedAt">) => request<AdminMusicTrack>("/api/admin/music-tracks", json("POST", body)),
-  updateMusic: (id: string, body: Partial<AdminMusicTrack>) => request<AdminMusicTrack>(`/api/admin/music-tracks/${id}`, json("PATCH", body)),
-  deleteMusic: (id: string) => request<{ success: true }>(`/api/admin/music-tracks/${id}`, { method: "DELETE" }),
   comments: () => request<ListResponse<AdminCommentItem>>("/api/admin/comments?page=1&pageSize=100"),
   updateComment: (id: string, status: "visible" | "hidden") => request<AdminCommentItem>(`/api/admin/comments/${id}`, json("PATCH", { status })),
   users: () => request<ListResponse<AdminUser>>("/api/admin/users?page=1&pageSize=100"),

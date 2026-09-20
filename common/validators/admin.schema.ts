@@ -122,19 +122,6 @@ export const UpdateUserStatusSchema = z.object({
   status: z.enum(["active", "banned"]),
 });
 
-export const CreateMusicTrackSchema = z.object({
-  url: z.string().trim().url("请输入有效的音乐链接").max(2000),
-  title: z.string().trim().min(1, "请输入歌曲标题").max(200),
-  artist: z.string().trim().max(200).nullable().optional(),
-  album: z.string().trim().max(200).nullable().optional(),
-  cover: z.string().trim().max(1000).nullable().optional(),
-  lyric: z.string().trim().max(50000).nullable().optional(),
-  sortOrder: z.number().int().min(0).max(9999).default(0),
-  status: z.enum(["enabled", "disabled"]).default("enabled"),
-});
-
-export const UpdateMusicTrackSchema = CreateMusicTrackSchema.partial();
-
 export const SiteConfigSchema = z.object({
   title: z.string().trim().min(1).max(120),
   faviconUrl: z.string().trim().max(1000),

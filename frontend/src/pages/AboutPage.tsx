@@ -6,7 +6,7 @@ const fallbackAbout = `## 你好，我是运阳 👋
 
 人生苦短，我用 Python。
 
-我是一名喜欢折腾新技术的开发者。这里是我的数字小窝，用来记录项目、代码、音乐，以及生活里偶尔闪光的瞬间。
+我是一名喜欢折腾新技术的开发者。这里是我的数字小窝，用来记录项目、代码，以及生活里偶尔闪光的瞬间。
 
 > 清晰比聪明重要，完成比完美重要，而工具最终应该把人的注意力还给人。
 
@@ -18,7 +18,7 @@ const fallbackAbout = `## 你好，我是运阳 👋
 
 ## 喜欢的东西
 
-Python、Linux、二次元、音乐，还有下雨时窗外安静的城市灯光。`;
+Python、Linux、二次元，还有下雨时窗外安静的城市灯光。`;
 
 export function AboutPage() {
   const query = useQuery({ queryKey: ["page", "about"], queryFn: () => contentApi.page("about") });

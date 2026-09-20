@@ -10,7 +10,6 @@ import { AboutPage } from "./pages/AboutPage";
 import { FriendsPage } from "./pages/FriendsPage";
 import { MomentsPage } from "./pages/MomentsPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
-import { MusicPage } from "./pages/MusicPage";
 import { SearchPage } from "./pages/SearchPage";
 import { MarkdownPage } from "./pages/MarkdownPage";
 
@@ -35,7 +34,6 @@ export const AppRoutes = () => (
       <Route path="posts/:slug" element={<BlogDetailPage />} />
       <Route path="moments" element={<MomentsPage />} />
       <Route path="projects" element={<ProjectsPage />} />
-      <Route path="music" element={<MusicPage />} />
       <Route path="friends" element={<FriendsPage />} />
       <Route path="about" element={<AboutPage />} />
       <Route path="admin" element={<AdminPage />} />

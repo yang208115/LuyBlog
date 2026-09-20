@@ -197,32 +197,6 @@ export const navItems = sqliteTable(
   (table) => [index("nav_items_status_sort_idx").on(table.status, table.sortOrder)],
 );
 
-export const musicTracks = sqliteTable(
-  "music_tracks",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    title: text("title").notNull(),
-    artist: text("artist"),
-    album: text("album"),
-    cover: text("cover"),
-    lyric: text("lyric"),
-    url: text("url").notNull(),
-    sortOrder: integer("sort_order").notNull().default(0),
-    status: text("status", { enum: ["enabled", "disabled"] }).notNull().default("enabled"),
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(strftime('%s', 'now'))`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(strftime('%s', 'now'))`),
-  },
-  (table) => [
-    index("music_tracks_status_sort_idx").on(table.status, table.sortOrder),
-  ],
-);
-
 export const comments = sqliteTable(
   "comments",
   {

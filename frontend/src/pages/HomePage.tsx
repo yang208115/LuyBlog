@@ -48,7 +48,7 @@ export default function HomePage() {
             我用 <em>Python</em>。
           </h1>
           <p className="lead">
-            嗨，我是{siteConfig.authorName}。这里是我的数字小窝，收录代码、项目、音乐，以及日常里偶尔闪光的瞬间。
+            嗨，我是{siteConfig.authorName}。这里是我的数字小窝，收录代码、项目，以及日常里偶尔闪光的瞬间。
           </p>
         </section>
 
@@ -118,7 +118,7 @@ export default function HomePage() {
                 style={featureImageStyle(secondaryCover)}
               >
                 <span className="eyebrow">生活切片</span>
-                <h3>{latestMoment?.contentMd || "夏夜、唱片与一个不会结束的播放列表"}</h3>
+                <h3>{latestMoment?.contentMd || "夏夜、灯光与一个不会结束的好梦"}</h3>
               </RouterLink>
             )}
 

@@ -6,7 +6,6 @@ import "uno.css";
 import "./prototype.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppThemeProvider } from "./context/ThemeContextProvider";
-import { MusicProvider } from "./context/MusicProvider";
 import { SiteConfigProvider } from "./context/SiteConfigProvider";
 import { AppRoutes } from "./routes";
 
@@ -28,11 +27,9 @@ const AppComponent = (
     <QueryClientProvider client={queryClient}>
       <SiteConfigProvider>
         <AppThemeProvider>
-          <MusicProvider>
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
-          </MusicProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
         </AppThemeProvider>
       </SiteConfigProvider>
     </QueryClientProvider>

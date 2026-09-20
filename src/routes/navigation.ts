@@ -15,9 +15,8 @@ export const defaultNavItems = [
   { id: "nav_search", label: "搜索", path: "/search", sortOrder: 20, status: "enabled" as const },
   { id: "nav_moments", label: "瞬间", path: "/moments", sortOrder: 30, status: "enabled" as const },
   { id: "nav_projects", label: "项目", path: "/projects", sortOrder: 40, status: "enabled" as const },
-  { id: "nav_music", label: "音乐", path: "/music", sortOrder: 50, status: "enabled" as const },
-  { id: "nav_friends", label: "友链", path: "/friends", sortOrder: 60, status: "enabled" as const },
-  { id: "nav_about", label: "关于", path: "/about", sortOrder: 70, status: "enabled" as const },
+  { id: "nav_friends", label: "友链", path: "/friends", sortOrder: 50, status: "enabled" as const },
+  { id: "nav_about", label: "关于", path: "/about", sortOrder: 60, status: "enabled" as const },
 ];
 
 export async function ensureNavItemsTable(db: DrizzleD1Database<typeof schema>) {

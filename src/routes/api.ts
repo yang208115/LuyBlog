@@ -9,7 +9,6 @@ import admin from "./admin";
 import ai from "./ai";
 import content from "./content";
 import utility, { protectedUtilityRoutes } from "./utility";
-import music from "./music";
 import siteConfig from "./siteConfig";
 import navigation from "./navigation";
 import { Bindings } from "../types";
@@ -29,7 +28,6 @@ const api = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>()
   .route("/auth", auth)
   .route("/posts", post)
   .route("/comments", comment)
-  .route("/music", music)
   .route("/", siteConfig)
   .route("/", navigation)
   .route("/", content)

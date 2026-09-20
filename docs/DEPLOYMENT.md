@@ -78,4 +78,4 @@ pnpm deploy
 - `/rss.xml`、`/feed.xml`、`/sitemap.xml` 正常
 - GitHub 登录完整走通
 - 管理员后台可以访问 `/admin`
-- 未登录访问 `/api/admin/*`、`/api/chat`、`POST /api/music/tracks/:id/refresh` 会被拒绝
+- 未登录访问 `/api/admin/*`、`/api/chat` 会被拒绝

@@ -3,7 +3,6 @@ import { Link as RouterLink, Outlet, useLocation, useNavigate } from "react-rout
 import { useEffect, useMemo, useState } from "react";
 import { Footer } from "./components/Footer";
 import { BackgroundEffects } from "./components/BackgroundEffects";
-import { FloatingPlayer } from "./components/FloatingPlayer";
 import { useAuth } from "./hooks/useAuth";
 import { useSiteConfig } from "./context/SiteConfigProvider";
 import { useAppTheme } from "./context/ThemeContextProvider";
@@ -25,7 +24,6 @@ const prototypeNavigation = [
   ["/blog", "文章"],
   ["/moments", "瞬间"],
   ["/projects", "项目"],
-  ["/music", "音乐"],
   ["/friends", "友链"],
   ["/about", "关于"],
 ] as const;
@@ -230,7 +228,6 @@ export default function App() {
         <Outlet />
       </main>
       {!isAdminRoute && <Footer />}
-      {!isAdminRoute && <FloatingPlayer />}
     </>
   );
 }

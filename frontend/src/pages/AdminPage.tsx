@@ -5,7 +5,6 @@ import { AdminLayout, AdminSection, adminSections } from "../admin/AdminLayout";
 import { CommentManager, UserManager } from "../admin/ReviewManagers";
 import { FriendLinkManager } from "../admin/FriendLinkManager";
 import { MomentManager } from "../admin/MomentManager";
-import { MusicManager } from "../admin/MusicManager";
 import { NavigationManager } from "../admin/NavigationManager";
 import { PageManager } from "../admin/PageManager";
 import { PostManager } from "../admin/PostManager";
@@ -24,7 +23,6 @@ const subtitles: Record<AdminSection, string> = {
   projects: "维护项目列表和展示顺序",
   pages: "编辑关于等 Markdown 页面",
   friends: "管理友链站点和展示状态",
-  music: "配置音乐链接和手动歌词",
   comments: "审核文章评论可见状态",
   users: "管理用户角色和账号状态",
 };
@@ -47,8 +45,6 @@ function renderSection(section: AdminSection) {
       return <PageManager />;
     case "friends":
       return <FriendLinkManager />;
-    case "music":
-      return <MusicManager />;
     case "comments":
       return <CommentManager />;
     case "users":
