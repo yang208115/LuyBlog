@@ -30,6 +30,8 @@ type Taxonomy = {
 
 const defaultBaseUrl = "https://api.openai.com/v1";
 const defaultModel = "gpt-4.1-mini";
+// 上游 AI 服务的请求超时，超时会以 AbortError/TimeoutError 抛出。
+const AI_REQUEST_TIMEOUT_MS = 15000;
 
 export function chatCompletionsUrl(baseUrl: string) {
   const trimmed = baseUrl.replace(/\/+$/, "");
@@ -49,19 +51,29 @@ async function runChatWithConfig(
   const baseUrl = config.baseUrl?.trim() || defaultBaseUrl;
   const model = config.model?.trim() || defaultModel;
 
-  const response = await fetch(chatCompletionsUrl(baseUrl), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: config.maxTokens ?? undefined,
-      temperature: temperature ?? config.temperature ?? 0.3,
-      messages,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(chatCompletionsUrl(baseUrl), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: config.maxTokens ?? undefined,
+        temperature: temperature ?? config.temperature ?? 0.3,
+        messages,
+      }),
+      signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+      // 以 "AI 服务调用失败" 开头，让路由层按 502 处理。
+      throw new Error(`AI 服务调用失败: 请求超时（${AI_REQUEST_TIMEOUT_MS / 1000} 秒）`);
+    }
+    throw error;
+  }
 
   const contentType = response.headers.get("content-type") ?? "";
   if (!response.ok) {
@@ -268,6 +280,8 @@ export async function moderateCommentWithConfig(config: AiConfig, content: strin
     const parsed = JSON.parse(result.text) as { flagged?: boolean; reason?: string | null };
     return { flagged: Boolean(parsed.flagged), reason: parsed.reason ?? null };
   } catch (error) {
+    // 审核服务超时（AI_REQUEST_TIMEOUT_MS）或出错时放行评论（fail-open），不阻塞用户发表；
+    // 管理员仍可在后台手动隐藏。
     console.warn("评论 AI 审核失败，已降级放行", error);
     return { flagged: false, reason: null };
   }

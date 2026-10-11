@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AiChatSchema, AiCompletePostSchema } from "../../common/validators/ai.schema";
-import { completePostWithConfig, makeUniqueSlug, normalizeSlug } from "./ai";
+import { completePostWithConfig, makeUniqueSlug, moderateCommentWithConfig, normalizeSlug } from "./ai";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -90,5 +90,30 @@ describe("AI post completion", () => {
         { categories: [], tags: [] },
       ),
     ).rejects.toThrow("格式无效");
+  });
+});
+
+describe("AI request timeout", () => {
+  const timeoutError = () => Object.assign(new Error("The operation timed out."), { name: "TimeoutError" });
+
+  it("passes an abort signal to fetch and reports timeouts as upstream failures", async () => {
+    const fetchMock = vi.fn(async () => {
+      throw timeoutError();
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      completePostWithConfig({ apiKey: "key" }, ["slug"], { title: "t", slug: "", summary: "", category: "", tags: [], contentMd: "c" }, { categories: [], tags: [] }),
+    ).rejects.toThrow(/^AI 服务调用失败: 请求超时/);
+    expect((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("lets comments through when moderation times out", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw timeoutError();
+    }));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await expect(moderateCommentWithConfig({ apiKey: "key" }, "hello")).resolves.toEqual({ flagged: false, reason: null });
   });
 });
