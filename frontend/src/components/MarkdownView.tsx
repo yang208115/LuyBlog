@@ -1,22 +1,32 @@
 import { Box } from "@mui/material";
 import rehypeRaw from "rehype-raw";
-import ReactMarkdown from "react-markdown";
+import rehypeSanitize, { defaultSchema, type Options as Schema } from "rehype-sanitize";
+import ReactMarkdown, { type Options as MarkdownOptions } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-function decodeHtmlEntities(value: string) {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&nbsp;/g, " ");
-}
+/**
+ * 允许渲染原始 HTML（rehypeRaw），但随后必须经过 rehypeSanitize 清洗。
+ * 在 GitHub 默认白名单基础上只做最小扩展：
+ * - 代码块的 className 仅允许 language-* / hljs 相关类名
+ * - img 允许 src/alt/width/height/title（src 协议仍受默认的 http/https 限制）
+ * - 不允许 iframe/script/style 等标签，也不允许 on* 事件属性
+ */
+export const markdownSanitizeSchema: Schema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    code: [...(defaultSchema.attributes?.code ?? []), ["className", /^(language|hljs)(-.+)?$/]],
+    pre: [...(defaultSchema.attributes?.pre ?? []), ["className", /^(language|hljs)(-.+)?$/]],
+    span: [...(defaultSchema.attributes?.span ?? []), ["className", /^hljs(-.+)?$/]],
+    img: [...(defaultSchema.attributes?.img ?? []), "src", "alt", "width", "height", "title"],
+  },
+};
+
+const remarkPlugins = [remarkGfm];
+// 顺序很重要：rehypeRaw 先把原始 HTML 解析成节点，rehypeSanitize 再统一清洗。
+const rehypePlugins: NonNullable<MarkdownOptions["rehypePlugins"]> = [rehypeRaw, [rehypeSanitize, markdownSanitizeSchema]];
 
 export function MarkdownView({ content }: { content: string }) {
-  const decodedContent = decodeHtmlEntities(content);
-
   return (
     <Box
       sx={(theme) => ({
@@ -52,8 +62,8 @@ export function MarkdownView({ content }: { content: string }) {
         "& td > div": { maxWidth: "100%" },
       })}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-        {decodedContent}
+      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
+        {content}
       </ReactMarkdown>
     </Box>
   );
