@@ -314,7 +314,7 @@ auth
       const userResponse = await fetch("https://api.github.com/user", {
         headers: {
           Authorization: `token ${tokenData.access_token}`,
-          "User-Agent": "nekro-edge-template",
+          "User-Agent": "luy-blog",
           Accept: "application/vnd.github.v3+json",
         },
       });

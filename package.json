@@ -1,5 +1,5 @@
 {
-  "name": "nekro-edge-template",
+  "name": "luy-blog",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -24,7 +24,7 @@
     "db:seed:prod": "wrangler d1 execute DB --env production --remote --file=./drizzle/seed.sql",
     "db:import:halo:prod": "wrangler d1 execute DB --env production --remote --file=./drizzle/halo-import.sql",
     "typecheck": "tsc --noEmit && tsc -p frontend/tsconfig.json --noEmit",
-    "lint": "tsc --noEmit && tsc -p frontend/tsconfig.json --noEmit",
+    "lint": "pnpm typecheck",
     "format": "prettier . --write"
   },
   "devDependencies": {
