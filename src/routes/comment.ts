@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, gte } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { comments, posts, users } from "../db/schema";
@@ -23,8 +23,55 @@ const CreateTargetCommentSchema = z.object({
   content: z.string().trim().min(1).max(1000),
 });
 
+// 每个用户每分钟最多评论数，以及相同内容的重复提交窗口。
+export const COMMENT_RATE_LIMIT = 5;
+export const COMMENT_RATE_WINDOW_MS = 60 * 1000;
+export const COMMENT_DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
+
 async function targetExists(db: DrizzleD1Database<typeof schema>, targetSlug: string) {
   return db.select({ id: posts.id, slug: posts.slug }).from(posts).where(and(eq(posts.slug, targetSlug), eq(posts.status, "published"))).get();
+}
+
+/**
+ * 基于 D1 的轻量限流：统计该用户最近一分钟内创建的评论（含被隐藏的），
+ * 并拒绝同一用户在同一目标下 10 分钟内提交的相同内容。
+ * 这不是原子操作，并发请求可能略微超出上限，但足以挡住脚本刷评论，
+ * 且必须在调用付费 AI 审核之前执行。
+ */
+async function checkCommentAbuse(
+  db: DrizzleD1Database<typeof schema>,
+  userId: string,
+  targetType: "post",
+  targetSlug: string,
+  content: string,
+): Promise<{ status: 409 | 429; message: string } | null> {
+  const now = Date.now();
+  const recent = await db
+    .select({ value: count() })
+    .from(comments)
+    .where(and(eq(comments.userId, userId), gte(comments.createdAt, new Date(now - COMMENT_RATE_WINDOW_MS))))
+    .get();
+  if ((recent?.value ?? 0) >= COMMENT_RATE_LIMIT) {
+    return { status: 429, message: "评论过于频繁，请稍后再试" };
+  }
+
+  const duplicate = await db
+    .select({ id: comments.id })
+    .from(comments)
+    .where(
+      and(
+        eq(comments.userId, userId),
+        eq(comments.targetType, targetType),
+        eq(comments.targetSlug, targetSlug),
+        eq(comments.content, content),
+        gte(comments.createdAt, new Date(now - COMMENT_DUPLICATE_WINDOW_MS)),
+      ),
+    )
+    .get();
+  if (duplicate) {
+    return { status: 409, message: "请勿重复提交相同的评论" };
+  }
+  return null;
 }
 
 app.get("/", async (c) => {
@@ -96,6 +143,35 @@ protectedRoutes.post("/", async (c) => {
   const target = await targetExists(db, targetSlug);
   if (!target) {
     return c.json({ code: 404, message: "评论目标不存在" }, 404);
+  }
+
+  // 仅支持单层回复：父评论必须存在、可见、属于同一目标，且自身不是回复。
+  if (parentId) {
+    const parent = await db
+      .select({
+        id: comments.id,
+        targetType: comments.targetType,
+        targetSlug: comments.targetSlug,
+        parentId: comments.parentId,
+      })
+      .from(comments)
+      .where(and(eq(comments.id, parentId), eq(comments.status, "visible")))
+      .get();
+    if (!parent) {
+      return c.json({ code: 404, message: "父评论不存在" }, 404);
+    }
+    if (parent.targetType !== targetType || parent.targetSlug !== targetSlug) {
+      return c.json({ code: 400, message: "父评论不属于该评论目标" }, 400);
+    }
+    if (parent.parentId) {
+      return c.json({ code: 400, message: "不支持多层嵌套回复" }, 400);
+    }
+  }
+
+  // 先做廉价的限流/去重检查，避免滥用请求触发付费的 AI 审核。
+  const abuse = await checkCommentAbuse(db, currentUser.id, targetType, targetSlug, content);
+  if (abuse) {
+    return c.json({ code: abuse.status, message: abuse.message }, abuse.status);
   }
 
   const config = await getSiteConfig(db);
