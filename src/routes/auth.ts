@@ -8,7 +8,7 @@ import {
   UserInfoSchema,
   RegenerateApiKeyResponseSchema,
 } from "../../common/validators/auth.schema";
-import { generateUserApiKey } from "../utils/encryption";
+import { generateUserApiKey } from "../utils/apiKey";
 import { createId } from "@paralleldrive/cuid2";
 import type { Bindings } from "../types";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
