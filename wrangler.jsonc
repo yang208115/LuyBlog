@@ -42,7 +42,7 @@
       ],
       "vars": {
         "APP_BASE_URL": "https://blog.lyuy.top",
-        "TURNSTILE_SITE_KEY": "",
+        "TURNSTILE_SITE_KEY": "0x4AAAAAAGSqT0xbUXcp6fcg",
         "TURNSTILE_HOSTNAMES": "blog.lyuy.top"
       }
     }
