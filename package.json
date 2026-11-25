@@ -7,7 +7,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "pnpm build && wrangler deploy --env production",
+    "deploy": "CLOUDFLARE_ENV=production pnpm build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "format": "biome check --write .",

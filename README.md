@@ -51,22 +51,22 @@ pnpm test             # 运行 Vitest 单元测试
 pnpm build            # 构建客户端与 Cloudflare Worker 服务端产物
 pnpm db:migrate       # 应用本地 D1 迁移
 pnpm db:migrate:prod  # 应用生产 D1 迁移
-pnpm deploy           # 构建并部署到 Cloudflare Workers
+pnpm deploy           # 以 CLOUDFLARE_ENV=production 构建并部署到 Cloudflare Workers
 ```
 
 ## 生产部署准备
 
 1. 确认在 Cloudflare 创建了 R2 存储桶 `luyblog-media`（与 [wrangler.jsonc](./wrangler.jsonc) 中 `env.production.r2_buckets` 一致）。
-2. 为生产 Worker 注入 Secrets：
+2. 为生产 Worker 注入隐私 Secrets（勿将 `TURNSTILE_SECRET` 写入 `wrangler.jsonc` 的 `vars`，以免与 Secret 冲突）：
 
 ```bash
-wrangler secret put GITHUB_CLIENT_ID --env production
-wrangler secret put GITHUB_CLIENT_SECRET --env production
-wrangler secret put TURNSTILE_SECRET --env production
+pnpm exec wrangler secret put GITHUB_CLIENT_ID --env production
+pnpm exec wrangler secret put GITHUB_CLIENT_SECRET --env production
+pnpm exec wrangler secret put TURNSTILE_SECRET --env production
 ```
 
-3. 在 [wrangler.jsonc](./wrangler.jsonc) 填入生产 Turnstile `TURNSTILE_SITE_KEY`（并保持 `TURNSTILE_HOSTNAMES` 仅包含线上域名 `blog.lyuy.top`）。
-4. 执行生产 D1 迁移并部署：
+3. 在 [wrangler.jsonc](./wrangler.jsonc) 的 `env.production.vars` 中填入公开的 `TURNSTILE_SITE_KEY`（并保持 `TURNSTILE_HOSTNAMES` 仅包含线上域名 `blog.lyuy.top`）。
+4. 执行生产 D1 迁移并部署（`pnpm deploy` 会在构建时通过 `CLOUDFLARE_ENV=production` 生成针对生产环境扁平化的 `dist/server/wrangler.json` 后直接执行 `wrangler deploy`）：
 
 ```bash
 pnpm db:migrate:prod
