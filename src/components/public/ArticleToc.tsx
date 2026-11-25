@@ -73,33 +73,31 @@ export function ArticleToc({ items }: { items: TocItem[] }) {
 
       {/* 桌面端粘性目录 */}
       <aside className="hidden lg:block">
-        <div className="sticky top-24">
-          <div className="astral-card rounded-2xl p-4">
-            <p className="mb-3 flex items-center gap-2 font-mono text-xs font-semibold tracking-wider text-[var(--muted)] uppercase">
-              <List className="h-3.5 w-3.5 text-[var(--accent)]" />
-              On This Page
-            </p>
-            <nav aria-label="文章目录">
-              <ul className="space-y-1 border-l border-[var(--border)] pl-3 text-sm">
-                {items.map((item) => (
-                  <li key={item.id}>
-                    <a
-                      href={`#${item.id}`}
-                      className={`block rounded-r-lg py-1 transition-colors ${
-                        item.depth === 3 ? "pl-3 text-xs" : "text-[13px]"
-                      } ${
-                        activeId === item.id
-                          ? "font-medium text-[var(--accent)]"
-                          : "text-[var(--muted)] hover:text-[var(--ink)]"
-                      }`}
-                    >
-                      {item.text}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
+        <div className="astral-card max-h-[calc(100vh-7.5rem)] overflow-y-auto rounded-2xl p-4">
+          <p className="mb-3 flex items-center gap-2 font-mono text-xs font-semibold tracking-wider text-[var(--muted)] uppercase">
+            <List className="h-3.5 w-3.5 text-[var(--accent)]" />
+            On This Page
+          </p>
+          <nav aria-label="文章目录">
+            <ul className="space-y-1 border-l border-[var(--border)] pl-3 text-sm">
+              {items.map((item) => (
+                <li key={item.id}>
+                  <a
+                    href={`#${item.id}`}
+                    className={`block rounded-r-lg py-1 transition-colors ${
+                      item.depth === 3 ? "pl-3 text-xs" : "text-[13px]"
+                    } ${
+                      activeId === item.id
+                        ? "font-medium text-[var(--accent)]"
+                        : "text-[var(--muted)] hover:text-[var(--ink)]"
+                    }`}
+                  >
+                    {item.text}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </aside>
     </>

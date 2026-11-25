@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/Primitives";
 import { useTheme } from "@/components/ui/ThemeContext";
 import { useToast } from "@/components/ui/Toast";
 import { getBootstrapFn } from "@/server/functions/public";
+import { getCurrentYearCN } from "@/shared/date";
 import type { SiteConfig } from "@/shared/siteConfig";
 
 function isExternalUrl(path: string): boolean {
@@ -77,7 +78,7 @@ function PublicLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
+  const { toggleTheme } = useTheme();
   const { toast } = useToast();
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -109,7 +110,7 @@ function PublicLayout() {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        void navigate({ to: "/search", search: { q: "" } });
+        void navigate({ to: "/search", search: {} });
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -190,7 +191,7 @@ function PublicLayout() {
           <div className="flex items-center gap-2">
             <Link
               to="/search"
-              search={{ q: "" }}
+              search={{}}
               aria-label="全站搜索"
               className="inline-flex h-9 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--ink)]"
             >
@@ -204,10 +205,11 @@ function PublicLayout() {
             <button
               type="button"
               onClick={toggleTheme}
-              aria-label={theme === "dark" ? "切换浅色主题" : "切换深色主题"}
+              aria-label="切换浅色/深色主题"
               className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--ink)]"
             >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <Sun className="hidden h-4 w-4 dark:block" />
+              <Moon className="block h-4 w-4 dark:hidden" />
             </button>
 
             {user ? (
@@ -478,7 +480,7 @@ function SiteFooter({ siteConfig }: { siteConfig: SiteConfig }) {
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-6 text-xs text-[var(--muted)]">
           <p>
-            © {new Date().getFullYear()} {siteConfig.title} · {siteConfig.authorName}
+            © {getCurrentYearCN()} {siteConfig.title} · {siteConfig.authorName}
           </p>
           <div className="flex items-center gap-4">
             <a href="/sitemap.xml" className="hover:text-[var(--ink)]">

@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 import { Button, ConfirmDialog, Textarea } from "@/components/ui/Primitives";
 import { useToast } from "@/components/ui/Toast";
 import { createCommentFn, deleteCommentFn } from "@/server/functions/public";
+import { formatDateTimeCN } from "@/shared/date";
 import type { CommentNode, SessionUser } from "@/shared/types";
 import { TurnstileWidget } from "./TurnstileWidget";
 
@@ -183,7 +184,7 @@ export function CommentsSection({
                   <div>
                     <p className="text-sm font-semibold text-[var(--ink)]">{comment.user.username}</p>
                     <time className="font-mono text-xs text-[var(--muted)]">
-                      {new Date(comment.createdAt).toLocaleString("zh-CN")}
+                      {formatDateTimeCN(comment.createdAt)}
                     </time>
                   </div>
                 </div>
@@ -224,7 +225,7 @@ export function CommentsSection({
                           <div>
                             <p className="text-xs font-semibold text-[var(--ink)]">{reply.user.username}</p>
                             <time className="font-mono text-[11px] text-[var(--muted)]">
-                              {new Date(reply.createdAt).toLocaleString("zh-CN")}
+                              {formatDateTimeCN(reply.createdAt)}
                             </time>
                           </div>
                         </div>

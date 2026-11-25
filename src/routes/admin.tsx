@@ -58,7 +58,7 @@ export const Route = createFileRoute("/admin")({
 
 function AdminShellLayout() {
   const { user, siteConfig } = Route.useLoaderData();
-  const { theme, toggleTheme } = useTheme();
+  const { toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (!user) {
@@ -170,10 +170,11 @@ function AdminShellLayout() {
           <button
             type="button"
             onClick={toggleTheme}
-            aria-label="切换主题"
+            aria-label="切换浅色/深色主题"
             className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--muted)] hover:text-[var(--ink)]"
           >
-            {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            <Sun className="hidden h-3.5 w-3.5 dark:block" />
+            <Moon className="block h-3.5 w-3.5 dark:hidden" />
           </button>
         </div>
 

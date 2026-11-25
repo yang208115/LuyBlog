@@ -1,13 +1,52 @@
 import { createFileRoute, useLoaderData, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Heart, Link2, MapPin } from "lucide-react";
-import { useState } from "react";
+import { Heart, ImageOff, Link2, MapPin } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { ArticleHtml } from "@/components/public/ArticleHtml";
 import { ImageLightbox } from "@/components/public/ImageLightbox";
 import { Card, EmptyState, Pagination } from "@/components/ui/Primitives";
 import { useToast } from "@/components/ui/Toast";
 import { getMomentsFn, toggleMomentLikeFn } from "@/server/functions/public";
+import { formatDateCN } from "@/shared/date";
+
+function MomentImageCard({ src, onOpen }: { src: string; onOpen: () => void }) {
+  const [failed, setFailed] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth === 0) {
+      setFailed(true);
+    }
+  }, []);
+
+  if (failed) {
+    return (
+      <div className="flex aspect-[4/3] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] p-3 text-center text-xs text-[var(--muted)]">
+        <ImageOff className="h-5 w-5 opacity-60" />
+        <span>图片暂不可用</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)]"
+    >
+      <img
+        ref={imgRef}
+        src={src}
+        alt=""
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      />
+    </button>
+  );
+}
 
 const MomentsSearchSchema = z.object({
   page: z.coerce.number().int().min(1).optional().catch(undefined),
@@ -95,7 +134,7 @@ function MomentsPage() {
                     </div>
                   </div>
                   <time className="font-mono text-xs text-[var(--muted)]">
-                    {new Date(moment.publishedAt || moment.createdAt).toLocaleDateString("zh-CN")}
+                    {formatDateCN(moment.publishedAt || moment.createdAt)}
                   </time>
                 </header>
 
@@ -112,22 +151,14 @@ function MomentsPage() {
                     }`}
                   >
                     {moment.images.map((src, idx) => (
-                      <button
+                      <MomentImageCard
                         key={`${moment.id}-${src}`}
-                        type="button"
-                        onClick={() => {
+                        src={src}
+                        onOpen={() => {
                           setLightboxImages(moment.images);
                           setLightboxIndex(idx);
                         }}
-                        className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)]"
-                      >
-                        <img
-                          src={src}
-                          alt=""
-                          loading="lazy"
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </button>
+                      />
                     ))}
                   </div>
                 )}

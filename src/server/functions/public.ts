@@ -39,7 +39,7 @@ import {
   users,
 } from "../db/schema";
 import { searchContent, syncSearchEntry } from "../db/search";
-import { renderMarkdown } from "../markdown/render";
+import { renderMarkdown, stripMarkdownExcerpt } from "../markdown/render";
 import { checkRateLimit, hashIp } from "../security/rateLimit";
 import { verifyTurnstileToken } from "../security/turnstile";
 
@@ -163,7 +163,7 @@ export const getHomeDataFn = createServerFn({ method: "GET" }).handler(async ():
     id: p.id,
     title: p.title,
     slug: p.slug,
-    summary: p.summary,
+    summary: p.summary ? stripMarkdownExcerpt(p.summary, 180) : null,
     cover: p.cover,
     tags: parseJsonArray(p.tags),
     category: p.category,
@@ -257,7 +257,7 @@ export const getPostsFn = createServerFn({ method: "GET" })
         id: p.id,
         title: p.title,
         slug: p.slug,
-        summary: p.summary,
+        summary: p.summary ? stripMarkdownExcerpt(p.summary, 180) : null,
         cover: p.cover,
         tags: parsedTags,
         category: p.category,
@@ -398,7 +398,7 @@ export const getPostBySlugFn = createServerFn({ method: "GET" })
       id: post.id,
       title: post.title,
       slug: post.slug,
-      summary: post.summary,
+      summary: post.summary ? stripMarkdownExcerpt(post.summary, 200) : null,
       cover: post.cover,
       tags: parseJsonArray(post.tags),
       category: post.category,

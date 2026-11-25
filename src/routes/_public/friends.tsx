@@ -1,11 +1,41 @@
 import { createFileRoute, useLoaderData } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, ExternalLink, Plus } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { TurnstileWidget } from "@/components/public/TurnstileWidget";
 import { Button, Card, EmptyState, Input, Modal, Textarea } from "@/components/ui/Primitives";
 import { useToast } from "@/components/ui/Toast";
 import { applyFriendLinkFn, getFriendLinksFn } from "@/server/functions/public";
+
+function FriendAvatar({ src, name }: { src: string | null; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth === 0) {
+      setFailed(true);
+    }
+  }, []);
+
+  if (src && !failed) {
+    return (
+      <img
+        ref={imgRef}
+        src={src}
+        alt={name}
+        onError={() => setFailed(true)}
+        className="h-12 w-12 shrink-0 rounded-xl border border-[var(--border)] object-cover"
+      />
+    );
+  }
+
+  return (
+    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-base font-bold text-[var(--accent)]">
+      {name.slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
 
 export const Route = createFileRoute("/_public/friends")({
   loader: () => getFriendLinksFn(),
@@ -94,17 +124,7 @@ function FriendsPage() {
               className="group block"
             >
               <Card className="flex items-start gap-3.5 p-4 transition-all hover:border-[var(--accent)]">
-                {friend.avatarUrl ? (
-                  <img
-                    src={friend.avatarUrl}
-                    alt={friend.name}
-                    className="h-12 w-12 shrink-0 rounded-xl border border-[var(--border)] object-cover"
-                  />
-                ) : (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-base font-bold text-[var(--accent)]">
-                    {friend.name.slice(0, 1).toUpperCase()}
-                  </span>
-                )}
+                <FriendAvatar src={friend.avatarUrl} name={friend.name} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="truncate text-sm font-bold text-[var(--ink)] group-hover:text-[var(--accent)]">

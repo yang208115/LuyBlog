@@ -5,6 +5,7 @@ import { ArticleToc } from "@/components/public/ArticleToc";
 import { CommentsSection } from "@/components/public/CommentsSection";
 import { Badge } from "@/components/ui/Primitives";
 import { getPostBySlugFn } from "@/server/functions/public";
+import { formatDateCN } from "@/shared/date";
 
 export const Route = createFileRoute("/_public/blog/$slug")({
   loader: ({ params }) => getPostBySlugFn({ data: { slug: params.slug } }),
@@ -56,7 +57,7 @@ function BlogDetailPage() {
       <div className="mb-6">
         <Link
           to="/blog"
-          search={{ page: 1 }}
+          search={{}}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--muted)] hover:text-[var(--accent)]"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -82,7 +83,7 @@ function BlogDetailPage() {
           <div className="mt-4 flex flex-wrap items-center gap-4 font-mono text-xs text-[var(--muted)]">
             <span className="inline-flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
-              {new Date(post.publishedAt || post.createdAt).toLocaleDateString("zh-CN")}
+              {formatDateCN(post.publishedAt || post.createdAt)}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
@@ -167,7 +168,7 @@ function BlogDetailPage() {
           </div>
 
           {post.toc.length > 0 && (
-            <div className="hidden lg:block">
+            <div className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
               <ArticleToc items={post.toc} />
             </div>
           )}

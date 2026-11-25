@@ -1,19 +1,71 @@
 import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
 import { ArrowRight, BookOpen, Eye, FolderGit2, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { ArticleHtml } from "@/components/public/ArticleHtml";
 import { Badge, Card } from "@/components/ui/Primitives";
 import { getHomeDataFn } from "@/server/functions/public";
+import { formatShortDateCN } from "@/shared/date";
 
 export const Route = createFileRoute("/_public/")({
   loader: () => getHomeDataFn(),
   component: HomePage,
 });
 
-function formatShortDate(value: string | null): string {
-  if (!value) return "--.--";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "--.--";
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+function HeroIllustrationCard({ src, title }: { src: string; title: string }) {
+  const [prevSrc, setPrevSrc] = useState(src);
+  const [stage, setStage] = useState<"primary" | "fallback" | "none">(src ? "primary" : "none");
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  if (prevSrc !== src) {
+    setPrevSrc(src);
+    setStage(src ? "primary" : "none");
+  }
+
+  const activeSrc = stage === "primary" ? src : stage === "fallback" ? "/anime-night-studio.png" : null;
+
+  const handleImageError = () => {
+    if (stage === "primary" && src !== "/anime-night-studio.png") {
+      setStage("fallback");
+    } else {
+      setStage("none");
+    }
+  };
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth === 0) {
+      if (stage === "primary" && src !== "/anime-night-studio.png") {
+        setStage("fallback");
+      } else if (stage === "fallback") {
+        setStage("none");
+      }
+    }
+  }, [stage, src]);
+
+  return (
+    <Card className="overflow-hidden p-2">
+      <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-gradient-to-br from-indigo-950/90 via-slate-900 to-fuchsia-950/80">
+        {activeSrc ? (
+          <img
+            ref={imgRef}
+            src={activeSrc}
+            alt={title}
+            onError={handleImageError}
+            className="h-full w-full object-cover transition-transform duration-500 hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-indigo-200/70">
+            <Sparkles className="h-10 w-10" />
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/75 via-slate-950/25 to-transparent p-4">
+          <span className="font-mono text-[11px] tracking-wider text-white/95 uppercase">
+            CURATED ILLUSTRATION
+          </span>
+        </div>
+      </div>
+    </Card>
+  );
 }
 
 function HomePage() {
@@ -60,7 +112,7 @@ function HomePage() {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               to="/blog"
-              search={{ page: 1 }}
+              search={{}}
               className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--accent)] px-5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
             >
               <BookOpen className="h-4 w-4" />
@@ -68,7 +120,7 @@ function HomePage() {
             </Link>
             <Link
               to="/moments"
-              search={{ page: 1 }}
+              search={{}}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 text-sm font-medium text-[var(--ink)] transition-colors hover:border-[var(--accent)]"
             >
               <Sparkles className="h-4 w-4 text-[var(--sakura)]" />
@@ -79,20 +131,7 @@ function HomePage() {
 
         {siteConfig.heroImage && (
           <div className="lg:col-span-5">
-            <Card className="overflow-hidden p-2">
-              <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-[var(--surface-subtle)]">
-                <img
-                  src={siteConfig.heroImage}
-                  alt={siteConfig.title}
-                  className="h-full w-full object-cover transition-transform duration-500 hover:scale-[1.02]"
-                />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent p-4">
-                  <span className="font-mono text-[11px] tracking-wider text-white/90 uppercase">
-                    CURATED ILLUSTRATION
-                  </span>
-                </div>
-              </div>
-            </Card>
+            <HeroIllustrationCard src={siteConfig.heroImage} title={siteConfig.title} />
           </div>
         )}
       </section>
@@ -107,7 +146,7 @@ function HomePage() {
             </div>
             <Link
               to="/blog"
-              search={{ page: 1 }}
+              search={{}}
               className="inline-flex items-center gap-1 text-xs font-medium text-[var(--accent)] hover:underline"
             >
               全部文章
@@ -130,7 +169,7 @@ function HomePage() {
                 <div className="p-6">
                   <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-[var(--muted)]">
                     {heroLead.category && <Badge tone="accent">{heroLead.category}</Badge>}
-                    <span>{formatShortDate(heroLead.publishedAt || heroLead.createdAt)}</span>
+                    <span>{formatShortDateCN(heroLead.publishedAt || heroLead.createdAt)}</span>
                     <span>·</span>
                     <span>{heroLead.readingTime} MIN READ</span>
                     <span>·</span>
@@ -164,7 +203,7 @@ function HomePage() {
               </div>
               <Link
                 to="/moments"
-                search={{ page: 1 }}
+                search={{}}
                 className="inline-flex items-center gap-1 text-xs font-medium text-[var(--accent)] hover:underline"
               >
                 更多切片
@@ -172,12 +211,12 @@ function HomePage() {
               </Link>
             </div>
             {data.latestMoment ? (
-              <Link to="/moments" search={{ page: 1 }} hash={data.latestMoment.slug} className="block">
+              <Link to="/moments" search={{}} hash={data.latestMoment.slug} className="block">
                 <Card className="p-5 transition-colors hover:border-[var(--sakura)]">
                   <div className="mb-2 flex items-center justify-between font-mono text-xs text-[var(--muted)]">
                     <span>{data.latestMoment.location || "DAILY NOTE"}</span>
                     <span>
-                      {formatShortDate(data.latestMoment.publishedAt || data.latestMoment.createdAt)}
+                      {formatShortDateCN(data.latestMoment.publishedAt || data.latestMoment.createdAt)}
                     </span>
                   </div>
                   <div className="line-clamp-4 text-sm text-[var(--ink)]">
@@ -264,7 +303,7 @@ function HomePage() {
               <div className="flex shrink-0 items-center gap-4 font-mono text-xs text-[var(--muted)]">
                 <span>{post.readingTime}m</span>
                 <span>{post.viewCount} views</span>
-                <span>{formatShortDate(post.publishedAt || post.createdAt)}</span>
+                <span>{formatShortDateCN(post.publishedAt || post.createdAt)}</span>
               </div>
             </Link>
           ))}

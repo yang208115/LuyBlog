@@ -4,6 +4,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { Badge, Card, EmptyState, Input, Pagination } from "@/components/ui/Primitives";
 import { getPostsFn } from "@/server/functions/public";
+import { formatDateCN } from "@/shared/date";
 
 const BlogSearchSchema = z.object({
   page: z.coerce.number().int().min(1).optional().catch(undefined),
@@ -157,7 +158,7 @@ function BlogListPage() {
                 <div className="flex flex-1 flex-col justify-between p-5">
                   <div>
                     <div className="flex items-center justify-between gap-2 font-mono text-xs text-[var(--muted)]">
-                      <span>{new Date(post.publishedAt || post.createdAt).toLocaleDateString("zh-CN")}</span>
+                      <span>{formatDateCN(post.publishedAt || post.createdAt)}</span>
                       <span className="inline-flex items-center gap-2">
                         <span>{post.readingTime}m</span>
                         <span className="inline-flex items-center gap-1">
