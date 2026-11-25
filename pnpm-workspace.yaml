@@ -1,8 +1,7 @@
-packages:
-  - "."
-
 allowBuilds:
-  '@swc/core': true
-  esbuild: false
-  sharp: false
-  workerd: false
+  '@swc/core': false
+  esbuild: true
+  workerd: true
+minimumReleaseAgeExclude:
+  - miniflare@5.20261123.1-beta
+  - wrangler@4.168.0

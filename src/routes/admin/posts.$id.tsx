@@ -1,0 +1,402 @@
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { ArrowLeft, Eye, Save, Sparkles } from "lucide-react";
+import { type ClipboardEvent, type DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ImageUploadButton, uploadFileToR2 } from "@/components/admin/ImageUploader";
+import { joinLines, normalizeSlugInput, splitTags } from "@/components/admin/utils";
+import { ArticleHtml } from "@/components/public/ArticleHtml";
+import { Badge, Button, Card, Input, Textarea } from "@/components/ui/Primitives";
+import { useToast } from "@/components/ui/Toast";
+import {
+  createPostFn,
+  getAdminPostByIdFn,
+  getPostTaxonomyFn,
+  previewMarkdownFn,
+  updatePostFn,
+} from "@/server/functions/admin";
+
+type EditorForm = {
+  title: string;
+  slug: string;
+  summary: string;
+  cover: string;
+  category: string;
+  tagsText: string;
+  contentMd: string;
+  status: "draft" | "published";
+};
+
+const emptyForm: EditorForm = {
+  title: "",
+  slug: "",
+  summary: "",
+  cover: "",
+  category: "",
+  tagsText: "",
+  contentMd: "",
+  status: "draft",
+};
+
+export const Route = createFileRoute("/admin/posts/$id")({
+  loader: async ({ params }) => {
+    const [taxonomy, post] = await Promise.all([
+      getPostTaxonomyFn(),
+      params.id === "new" ? Promise.resolve(null) : getAdminPostByIdFn({ data: { id: params.id } }),
+    ]);
+    return { taxonomy, post, isNew: params.id === "new" };
+  },
+  component: AdminPostEditorPage,
+});
+
+function AdminPostEditorPage() {
+  const { taxonomy, post, isNew } = Route.useLoaderData();
+  const navigate = useNavigate();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const createPost = useServerFn(createPostFn);
+  const updatePost = useServerFn(updatePostFn);
+  const previewMarkdown = useServerFn(previewMarkdownFn);
+
+  const initialForm: EditorForm = useMemo(
+    () =>
+      post
+        ? {
+            title: post.title,
+            slug: post.slug,
+            summary: post.summary ?? "",
+            cover: post.cover ?? "",
+            category: post.category ?? "",
+            tagsText: joinLines(post.tags),
+            contentMd: post.contentMd,
+            status: post.status,
+          }
+        : emptyForm,
+    [post],
+  );
+
+  const [form, setForm] = useState<EditorForm>(initialForm);
+  const [tab, setTab] = useState<"split" | "edit" | "preview">("split");
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [saving, setSaving] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    setForm(initialForm);
+  }, [initialForm]);
+
+  const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  useEffect(() => {
+    if (tab === "edit") return;
+    const timer = window.setTimeout(() => {
+      void previewMarkdown({ data: { contentMd: form.contentMd } })
+        .then((res) => setPreviewHtml(res.html))
+        .catch(() => {});
+    }, 280);
+    return () => window.clearTimeout(timer);
+  }, [form.contentMd, previewMarkdown, tab]);
+
+  const insertAtCursor = (snippet: string) => {
+    const el = textareaRef.current;
+    if (!el) {
+      setForm((f) => ({ ...f, contentMd: `${f.contentMd}\n${snippet}` }));
+      return;
+    }
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const next = `${form.contentMd.slice(0, start)}${snippet}${form.contentMd.slice(end)}`;
+    setForm((f) => ({ ...f, contentMd: next }));
+    window.requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + snippet.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
+  const handleImageFiles = async (files: FileList | File[]) => {
+    const imageFile = Array.from(files).find((file) => file.type.startsWith("image/"));
+    if (!imageFile) return;
+    try {
+      const uploaded = await uploadFileToR2(imageFile);
+      insertAtCursor(`\n![${uploaded.filename}](${uploaded.url})\n`);
+      toast("图片已上传并插入正文", "success");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "上传失败", "error");
+    }
+  };
+
+  const handleDrop = (e: DragEvent<HTMLTextAreaElement>) => {
+    if (e.dataTransfer.files.length === 0) return;
+    e.preventDefault();
+    void handleImageFiles(e.dataTransfer.files);
+  };
+
+  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = e.clipboardData?.files;
+    if (!files || files.length === 0) return;
+    const hasImage = Array.from(files).some((file) => file.type.startsWith("image/"));
+    if (!hasImage) return;
+    e.preventDefault();
+    void handleImageFiles(files);
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.slug.trim() || !form.contentMd.trim()) {
+      toast("请填写标题、Slug 和正文", "error");
+      return;
+    }
+    setSaving(true);
+    const body = {
+      title: form.title.trim(),
+      slug: form.slug.trim(),
+      summary: form.summary.trim() || null,
+      cover: form.cover.trim() || null,
+      category: form.category.trim() || null,
+      tags: splitTags(form.tagsText),
+      contentMd: form.contentMd,
+      status: form.status,
+    };
+
+    try {
+      if (isNew) {
+        const created = await createPost({ data: body });
+        toast("文章已创建", "success");
+        await navigate({ to: "/admin/posts/$id", params: { id: created.id } });
+      } else if (post) {
+        await updatePost({ data: { id: post.id, ...body } });
+        toast("文章已保存", "success");
+        await router.invalidate();
+      }
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "保存失败", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border)] pb-5">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/admin/posts"
+            search={{ page: 1, status: "all" }}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--accent)]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-[var(--ink)]">{isNew ? "新建文章" : "编辑文章"}</h1>
+            <p className="font-mono text-xs text-[var(--muted)]">{dirty ? "有未保存修改" : "已同步"}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={form.status}
+            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as "draft" | "published" }))}
+            className="h-9 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)]"
+          >
+            <option value="draft">草稿</option>
+            <option value="published">已发布</option>
+          </select>
+
+          {!isNew && post?.status === "published" && (
+            <Link
+              to="/blog/$slug"
+              params={{ slug: post.slug }}
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--ink)]"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              预览线上
+            </Link>
+          )}
+
+          <Button type="button" onClick={handleSave} disabled={saving}>
+            <Save className="h-4 w-4" />
+            {saving ? "保存中…" : "保存文章"}
+          </Button>
+        </div>
+      </header>
+
+      <Card className="grid gap-4 p-5 md:grid-cols-2">
+        <label className="space-y-1.5 text-sm">
+          <span className="font-medium text-[var(--ink)]">文章标题</span>
+          <Input
+            value={form.title}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            placeholder="输入文章标题"
+          />
+        </label>
+
+        <div className="space-y-1.5 text-sm">
+          <span className="font-medium text-[var(--ink)]">Slug（小写字母、数字、连字符）</span>
+          <div className="flex gap-2">
+            <Input
+              value={form.slug}
+              onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+              placeholder="my-awesome-post"
+              className="font-mono"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                setForm((f) => ({ ...f, slug: normalizeSlugInput(f.title) || `post-${Date.now()}` }))
+              }
+              title="从标题生成 Slug"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        <label className="space-y-1.5 text-sm">
+          <span className="font-medium text-[var(--ink)]">分类</span>
+          <Input
+            list="post-category-list"
+            value={form.category}
+            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+            placeholder="例如：工程札记"
+          />
+          <datalist id="post-category-list">
+            {taxonomy.categories.map((cat) => (
+              <option key={cat} value={cat} />
+            ))}
+          </datalist>
+        </label>
+
+        <div className="space-y-1.5 text-sm">
+          <span className="font-medium text-[var(--ink)]">封面 URL</span>
+          <div className="flex gap-2">
+            <Input
+              value={form.cover}
+              onChange={(e) => setForm((f) => ({ ...f, cover: e.target.value }))}
+              placeholder="/api/media/... 或 https://..."
+            />
+            <ImageUploadButton
+              label="上传封面"
+              onUploaded={(media) => setForm((f) => ({ ...f, cover: media.url }))}
+              className="h-9 shrink-0"
+            />
+          </div>
+        </div>
+
+        <label className="space-y-1.5 text-sm">
+          <span className="font-medium text-[var(--ink)]">标签（每行或逗号分隔）</span>
+          <Input
+            value={form.tagsText}
+            onChange={(e) => setForm((f) => ({ ...f, tagsText: e.target.value }))}
+            placeholder="Cloudflare, TypeScript"
+          />
+          {taxonomy.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-1">
+              {taxonomy.tags.slice(0, 10).map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    const current = splitTags(form.tagsText);
+                    if (!current.includes(tag)) {
+                      setForm((f) => ({ ...f, tagsText: [...current, tag].join(", ") }));
+                    }
+                  }}
+                >
+                  <Badge tone="neutral">+{tag}</Badge>
+                </button>
+              ))}
+            </div>
+          )}
+        </label>
+
+        <label className="space-y-1.5 text-sm">
+          <span className="font-medium text-[var(--ink)]">摘要</span>
+          <Textarea
+            rows={2}
+            value={form.summary}
+            onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
+            placeholder="可选，用于首页与列表卡片简介"
+          />
+        </label>
+      </Card>
+
+      {/* Markdown 编辑器与实时预览 */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-2.5">
+          <div className="flex items-center gap-1">
+            {(
+              [
+                ["split", "分栏"],
+                ["edit", "纯编辑"],
+                ["preview", "纯预览"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                className={`rounded-lg px-3 py-1 text-xs font-medium ${
+                  tab === key
+                    ? "bg-[var(--accent)] text-white"
+                    : "text-[var(--muted)] hover:text-[var(--ink)]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="hidden text-xs text-[var(--muted)] sm:inline">
+              支持拖拽或粘贴图片直接上传 R2
+            </span>
+            <ImageUploadButton
+              label="插入图片"
+              onUploaded={(media) => insertAtCursor(`\n![${media.filename}](${media.url})\n`)}
+            />
+          </div>
+        </div>
+
+        <div
+          className={
+            tab === "split"
+              ? "grid min-h-[540px] lg:grid-cols-2 lg:divide-x lg:divide-[var(--border)]"
+              : "min-h-[540px]"
+          }
+        >
+          {tab !== "preview" && (
+            <textarea
+              ref={textareaRef}
+              value={form.contentMd}
+              onChange={(e) => setForm((f) => ({ ...f, contentMd: e.target.value }))}
+              onDrop={handleDrop}
+              onPaste={handlePaste}
+              placeholder="# 开始写作 Markdown…"
+              className="h-full min-h-[540px] w-full resize-y bg-[var(--surface)] p-5 font-mono text-sm leading-relaxed text-[var(--ink)] focus:outline-none"
+            />
+          )}
+          {tab !== "edit" && (
+            <div className="max-h-[720px] overflow-y-auto bg-[var(--surface)] p-6">
+              {previewHtml ? (
+                <ArticleHtml html={previewHtml} />
+              ) : (
+                <p className="text-sm text-[var(--muted)]">输入 Markdown 后这里会展示服务端同款高亮预览…</p>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}

@@ -176,3 +176,5 @@ dist
 # Local dev database
 local.db
 *.db
+
+docs/
