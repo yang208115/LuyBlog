@@ -1,8 +1,21 @@
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Eye, Save, Sparkles } from "lucide-react";
-import { type ClipboardEvent, type DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Eye, Link2, Save, Sparkles } from "lucide-react";
+import {
+  type ClipboardEvent,
+  type DragEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ImageUploadButton, uploadFileToR2 } from "@/components/admin/ImageUploader";
+import {
+  buildScrollAnchors,
+  extractMarkdownHeadingRatios,
+  mapScrollPosition,
+} from "@/components/admin/scrollSync";
 import { joinLines, normalizeSlugInput, splitTags } from "@/components/admin/utils";
 import { ArticleHtml } from "@/components/public/ArticleHtml";
 import { Badge, Button, Card, Input, Textarea } from "@/components/ui/Primitives";
@@ -77,9 +90,20 @@ function AdminPostEditorPage() {
 
   const [form, setForm] = useState<EditorForm>(initialForm);
   const [tab, setTab] = useState<"split" | "edit" | "preview">("split");
+  const [syncScroll, setSyncScroll] = useState(true);
   const [previewHtml, setPreviewHtml] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewReloadKey, setPreviewReloadKey] = useState(0);
   const [saving, setSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const hasPreviewRef = useRef(false);
+  const scrollLockRef = useRef<{ pane: "editor" | "preview" | null; timer: number | null }>({
+    pane: null,
+    timer: null,
+  });
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     setForm(initialForm);
@@ -98,14 +122,130 @@ function AdminPostEditorPage() {
   }, [dirty]);
 
   useEffect(() => {
+    void previewReloadKey;
     if (tab === "edit") return;
+    if (!form.contentMd.trim()) {
+      hasPreviewRef.current = false;
+      setPreviewHtml("");
+      setPreviewError(null);
+      setPreviewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const delay = hasPreviewRef.current ? 280 : 80;
+    setPreviewLoading(true);
+    setPreviewError(null);
+
     const timer = window.setTimeout(() => {
       void previewMarkdown({ data: { contentMd: form.contentMd } })
-        .then((res) => setPreviewHtml(res.html))
-        .catch(() => {});
-    }, 280);
-    return () => window.clearTimeout(timer);
-  }, [form.contentMd, previewMarkdown, tab]);
+        .then((res) => {
+          if (cancelled) return;
+          hasPreviewRef.current = true;
+          setPreviewHtml(res.html);
+          setPreviewError(null);
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setPreviewError(err instanceof Error ? err.message : "预览渲染失败");
+        })
+        .finally(() => {
+          if (cancelled) return;
+          setPreviewLoading(false);
+        });
+    }, delay);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [form.contentMd, previewMarkdown, previewReloadKey, tab]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollLockRef.current.timer !== null) {
+        window.clearTimeout(scrollLockRef.current.timer);
+      }
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
+
+  const computeAnchors = useCallback(
+    (editorEl: HTMLTextAreaElement, previewEl: HTMLDivElement) => {
+      const charsPerLine = Math.max(20, Math.floor((editorEl.clientWidth - 40) / 8.4));
+      const headingRatios = extractMarkdownHeadingRatios(form.contentMd, charsPerLine);
+      const previewRect = previewEl.getBoundingClientRect();
+      const previewHeadings = Array.from(previewEl.querySelectorAll("h1, h2, h3, h4, h5, h6")).map((el) => ({
+        text: el.textContent ?? "",
+        top: el.getBoundingClientRect().top - previewRect.top + previewEl.scrollTop,
+      }));
+      return buildScrollAnchors({
+        headingRatios,
+        previewHeadings,
+        editorScrollHeight: editorEl.scrollHeight,
+        editorMaxScroll: Math.max(0, editorEl.scrollHeight - editorEl.clientHeight),
+        previewMaxScroll: Math.max(0, previewEl.scrollHeight - previewEl.clientHeight),
+      });
+    },
+    [form.contentMd],
+  );
+
+  const claimScrollPane = useCallback((pane: "editor" | "preview") => {
+    if (scrollLockRef.current.pane && scrollLockRef.current.pane !== pane) {
+      if (scrollLockRef.current.timer !== null) {
+        window.clearTimeout(scrollLockRef.current.timer);
+        scrollLockRef.current.timer = null;
+      }
+      scrollLockRef.current.pane = null;
+    }
+  }, []);
+
+  const syncFrom = useCallback(
+    (source: "editor" | "preview") => {
+      if (!syncScroll || tab !== "split") return;
+      if (scrollLockRef.current.pane && scrollLockRef.current.pane !== source) return;
+      if (!textareaRef.current || !previewRef.current) return;
+
+      scrollLockRef.current.pane = source;
+      if (scrollLockRef.current.timer !== null) {
+        window.clearTimeout(scrollLockRef.current.timer);
+      }
+      scrollLockRef.current.timer = window.setTimeout(() => {
+        scrollLockRef.current.pane = null;
+        scrollLockRef.current.timer = null;
+      }, 120);
+
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+      }
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = null;
+        const currentEditor = textareaRef.current;
+        const currentPreview = previewRef.current;
+        if (!currentEditor || !currentPreview) return;
+        const anchors = computeAnchors(currentEditor, currentPreview);
+        if (source === "editor") {
+          currentPreview.scrollTop = mapScrollPosition(anchors, currentEditor.scrollTop, "editorToPreview");
+        } else {
+          currentEditor.scrollTop = mapScrollPosition(anchors, currentPreview.scrollTop, "previewToEditor");
+        }
+      });
+    },
+    [computeAnchors, syncScroll, tab],
+  );
+
+  useEffect(() => {
+    if (!previewHtml || !syncScroll || tab !== "split") return;
+    const editorEl = textareaRef.current;
+    if (!editorEl || editorEl.scrollTop <= 0) return;
+    if (scrollLockRef.current.pane && scrollLockRef.current.pane !== "editor") return;
+    const id = window.requestAnimationFrame(() => {
+      syncFrom("editor");
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [previewHtml, syncFrom, syncScroll, tab]);
 
   const insertAtCursor = (snippet: string) => {
     const el = textareaRef.current;
@@ -346,15 +486,31 @@ function AdminPostEditorPage() {
                 key={key}
                 type="button"
                 onClick={() => setTab(key)}
-                className={`rounded-lg px-3 py-1 text-xs font-medium ${
+                className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-medium ${
                   tab === key
-                    ? "bg-[var(--accent)] text-white"
+                    ? "bg-[var(--accent)] text-[var(--accent-ink)]"
                     : "text-[var(--muted)] hover:text-[var(--ink)]"
                 }`}
               >
                 {label}
               </button>
             ))}
+            {tab === "split" && (
+              <button
+                type="button"
+                onClick={() => setSyncScroll((v) => !v)}
+                aria-pressed={syncScroll}
+                title={syncScroll ? "关闭左右同步滚动" : "开启左右同步滚动"}
+                className={`ml-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  syncScroll
+                    ? "border-[var(--accent)]/30 bg-[var(--accent-soft)] text-[var(--accent)]"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)]"
+                }`}
+              >
+                <Link2 className="h-3.5 w-3.5" />
+                同步滚动
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -382,17 +538,56 @@ function AdminPostEditorPage() {
               onChange={(e) => setForm((f) => ({ ...f, contentMd: e.target.value }))}
               onDrop={handleDrop}
               onPaste={handlePaste}
+              onScroll={() => syncFrom("editor")}
+              onWheel={() => claimScrollPane("editor")}
+              onPointerDown={() => claimScrollPane("editor")}
+              onTouchStart={() => claimScrollPane("editor")}
               placeholder="# 开始写作 Markdown…"
-              className="h-full min-h-[540px] w-full resize-y bg-[var(--surface)] p-5 font-mono text-sm leading-relaxed text-[var(--ink)] focus:outline-none"
+              className={`w-full bg-[var(--surface)] p-5 font-mono text-sm leading-relaxed text-[var(--ink)] focus:outline-none ${
+                tab === "split"
+                  ? "h-[68vh] min-h-[540px] max-h-[760px] resize-none overflow-y-auto"
+                  : "h-full min-h-[540px] resize-y"
+              }`}
             />
           )}
           {tab !== "edit" && (
-            <div className="max-h-[720px] overflow-y-auto bg-[var(--surface)] p-6">
-              {previewHtml ? (
-                <ArticleHtml html={previewHtml} />
-              ) : (
-                <p className="text-sm text-[var(--muted)]">输入 Markdown 后这里会展示服务端同款高亮预览…</p>
+            <div
+              ref={previewRef}
+              onScroll={() => syncFrom("preview")}
+              onWheel={() => claimScrollPane("preview")}
+              onPointerDown={() => claimScrollPane("preview")}
+              onTouchStart={() => claimScrollPane("preview")}
+              className={`relative overflow-y-auto bg-[var(--surface)] p-6 ${
+                tab === "split" ? "h-[68vh] min-h-[540px] max-h-[760px]" : "min-h-[540px] max-h-[760px]"
+              }`}
+            >
+              {previewError && (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-600 dark:text-rose-400">
+                  <span>预览加载失败：{previewError}</span>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setPreviewReloadKey((k) => k + 1)}
+                  >
+                    重试预览
+                  </Button>
+                </div>
               )}
+              {previewHtml ? (
+                <>
+                  {previewLoading && (
+                    <span className="mb-3 inline-block rounded-md border border-[var(--border)] bg-[var(--surface-subtle)] px-2 py-0.5 font-mono text-[11px] text-[var(--muted)]">
+                      同步预览中…
+                    </span>
+                  )}
+                  <ArticleHtml html={previewHtml} />
+                </>
+              ) : previewLoading ? (
+                <p className="text-sm text-[var(--muted)]">正在渲染预览…</p>
+              ) : !previewError ? (
+                <p className="text-sm text-[var(--muted)]">输入 Markdown 后这里会展示服务端同款高亮预览…</p>
+              ) : null}
             </div>
           )}
         </div>

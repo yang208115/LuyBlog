@@ -24,6 +24,7 @@ export type SiteConfig = {
   navAfter: string;
   avatarUrl: string;
   heroImage: string;
+  heroImageLight: string;
   defaultPostCover: string;
   social: SiteSocial;
   buildDate: string;
@@ -53,6 +54,7 @@ export const defaultSiteConfig: SiteConfig = {
   navAfter: "小窝",
   avatarUrl: "https://avatars.githubusercontent.com/u/132762661?v=4",
   heroImage: "/anime-night-studio.png",
+  heroImageLight: "/anime-day-studio.png",
   defaultPostCover: "",
   social: {
     github: "https://github.com/yang208115",
@@ -91,6 +93,17 @@ export function normalizeSiteConfig(value: unknown): SiteConfig {
     typeof source.heroImage === "string"
       ? sanitizeLegacyUrl(source.heroImage, LEGACY_PLACEHOLDER_URLS, "")
       : legacyBgImages[0] || defaultSiteConfig.heroImage;
+
+  const heroImageLightCandidate =
+    typeof source.heroImageLight === "string"
+      ? sanitizeLegacyUrl(source.heroImageLight, LEGACY_PLACEHOLDER_URLS, "")
+      : heroImageCandidate === ""
+        ? ""
+        : heroImageCandidate === defaultSiteConfig.heroImage ||
+            typeof source.heroImage !== "string" ||
+            heroImageCandidate.includes("anime-night-studio")
+          ? defaultSiteConfig.heroImageLight
+          : "";
 
   const icpRaw =
     source.icpConfig && typeof source.icpConfig === "object"
@@ -133,6 +146,7 @@ export function normalizeSiteConfig(value: unknown): SiteConfig {
         ? source.avatarUrl.trim()
         : defaultSiteConfig.avatarUrl,
     heroImage: heroImageCandidate,
+    heroImageLight: heroImageLightCandidate,
     defaultPostCover: sanitizeLegacyUrl(source.defaultPostCover, LEGACY_PLACEHOLDER_URLS, ""),
     social: {
       github:

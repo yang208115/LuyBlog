@@ -15,6 +15,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "运阳的小窝" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=Noto+Serif+SC:wght@500;600;700&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/svg+xml", href: "/luyblog-icon.svg" },
       { rel: "alternate", type: "application/rss+xml", title: "RSS", href: "/rss.xml" },
@@ -47,14 +53,14 @@ function RootDocument({ children }: { children: ReactNode }) {
 function RootNotFound() {
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
-      <div className="astral-card max-w-md rounded-2xl p-8 text-center">
+      <div className="astral-card max-w-md rounded-xl p-8 text-center">
         <p className="font-mono text-xs tracking-widest text-[var(--accent)]">404 / NOT FOUND</p>
-        <h1 className="mt-2 text-2xl font-bold text-[var(--ink)]">页面走丢在星雾里了</h1>
+        <h1 className="font-editorial mt-2 text-2xl font-bold text-[var(--ink)]">页面走丢在星雾里了</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">你访问的地址不存在，或者尚未发布。</p>
         <div className="mt-6">
           <Link
             to="/"
-            className="inline-flex h-9 items-center justify-center rounded-xl bg-[var(--accent)] px-4 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
+            className="inline-flex h-9 items-center justify-center rounded-xl bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
           >
             回到首页
           </Link>
@@ -68,14 +74,14 @@ function RootError({ error }: { error: unknown }) {
   const message = error instanceof Error ? error.message : "发生未知错误";
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
-      <div className="astral-card max-w-md rounded-2xl p-8 text-center">
+      <div className="astral-card max-w-md rounded-xl p-8 text-center">
         <p className="font-mono text-xs tracking-widest text-rose-500">ERROR</p>
-        <h1 className="mt-2 text-2xl font-bold text-[var(--ink)]">页面渲染遇到一点小波折</h1>
+        <h1 className="font-editorial mt-2 text-2xl font-bold text-[var(--ink)]">页面渲染遇到一点小波折</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">{message}</p>
         <div className="mt-6">
           <Link
             to="/"
-            className="inline-flex h-9 items-center justify-center rounded-xl bg-[var(--accent)] px-4 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
+            className="inline-flex h-9 items-center justify-center rounded-xl bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
           >
             返回首页
           </Link>

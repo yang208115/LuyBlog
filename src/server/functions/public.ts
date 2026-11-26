@@ -192,7 +192,7 @@ export const getHomeDataFn = createServerFn({ method: "GET" }).handler(async ():
 
   return {
     featuredPosts: mappedPosts.slice(0, 2),
-    recentPosts: mappedPosts.slice(0, 5),
+    recentPosts: mappedPosts.slice(0, 6),
     latestMoment,
     projects: projectRows.map((pr) => ({
       id: pr.id,

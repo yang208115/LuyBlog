@@ -170,13 +170,34 @@ function AdminSettingsPage() {
 
           <div className="space-y-1.5 text-sm">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-[var(--ink)]">首页精选插画 URL（留空则纯排版）</span>
+              <span className="font-medium text-[var(--ink)]">首页浅色插画 URL（昼刊，留空跟随深色图）</span>
               <ImageUploadButton
-                label="上传插画"
+                label="上传昼刊插画"
+                onUploaded={(m) => setForm({ ...form, heroImageLight: m.url })}
+              />
+            </div>
+            <Input
+              value={form.heroImageLight}
+              onChange={(e) => setForm({ ...form, heroImageLight: e.target.value })}
+              placeholder="/anime-day-studio.png"
+            />
+          </div>
+
+          <div className="space-y-1.5 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-[var(--ink)]">
+                首页深色插画 URL（夜刊，双图均留空则纯排版）
+              </span>
+              <ImageUploadButton
+                label="上传夜刊插画"
                 onUploaded={(m) => setForm({ ...form, heroImage: m.url })}
               />
             </div>
-            <Input value={form.heroImage} onChange={(e) => setForm({ ...form, heroImage: e.target.value })} />
+            <Input
+              value={form.heroImage}
+              onChange={(e) => setForm({ ...form, heroImage: e.target.value })}
+              placeholder="/anime-night-studio.png"
+            />
           </div>
 
           <div className="space-y-1.5 text-sm">

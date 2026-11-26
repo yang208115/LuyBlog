@@ -27,7 +27,7 @@ export function ImageLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d0f16]/90 p-4 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
       onMouseDown={onClose}
@@ -36,7 +36,7 @@ export function ImageLightbox({
         type="button"
         onClick={onClose}
         aria-label="关闭灯箱"
-        className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+        className="absolute top-4 right-4 cursor-pointer rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
       >
         <X className="h-5 w-5" />
       </button>
@@ -49,7 +49,7 @@ export function ImageLightbox({
             onIndexChange(index - 1);
           }}
           aria-label="上一张"
-          className="absolute left-4 rounded-full bg-white/10 p-2.5 text-white hover:bg-white/20"
+          className="absolute left-4 cursor-pointer rounded-full bg-white/10 p-2.5 text-white transition-colors hover:bg-white/20"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -59,7 +59,7 @@ export function ImageLightbox({
         src={images[index]}
         alt=""
         onMouseDown={(e) => e.stopPropagation()}
-        className="max-h-[88vh] max-w-[92vw] rounded-2xl object-contain shadow-2xl"
+        className="max-h-[88vh] max-w-[92vw] rounded-xl border border-white/10 object-contain shadow-2xl"
       />
 
       {images.length > 1 && index < images.length - 1 && (

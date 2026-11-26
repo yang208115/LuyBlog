@@ -1,6 +1,6 @@
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CornerDownRight, MessageSquare, Trash2 } from "lucide-react";
+import { CornerDownRight, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Button, ConfirmDialog, Textarea } from "@/components/ui/Primitives";
 import { useToast } from "@/components/ui/Toast";
@@ -15,12 +15,12 @@ function Avatar({ username, avatarUrl }: { username: string; avatarUrl: string |
       <img
         src={avatarUrl}
         alt={username}
-        className="h-8 w-8 rounded-full border border-[var(--border)] object-cover"
+        className="h-8 w-8 rounded-lg border border-[var(--border)] object-cover"
       />
     );
   }
   return (
-    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-soft)] text-xs font-semibold text-[var(--accent)]">
+    <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)] font-editorial text-xs font-semibold text-[var(--ink)]">
       {username.slice(0, 1).toUpperCase()}
     </span>
   );
@@ -108,27 +108,25 @@ export function CommentsSection({
 
   return (
     <section className="mt-14 border-t border-[var(--border)] pt-10" aria-label="评论区">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <p className="font-mono text-xs tracking-wider text-[var(--accent)] uppercase">DISCUSSION</p>
-          <h2 className="mt-1 flex items-center gap-2 text-xl font-bold text-[var(--ink)]">
-            <MessageSquare className="h-5 w-5 text-[var(--accent)]" />
-            评论 · {totalCount}
-          </h2>
+      <div className="mb-6 flex items-baseline justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--sakura)]" aria-hidden="true" />
+          <h2 className="font-editorial text-2xl font-semibold tracking-tight text-[var(--ink)]">读者留言</h2>
+          <span className="font-mono text-xs text-[var(--muted-soft)] tabular-nums">({totalCount})</span>
         </div>
       </div>
 
       {user ? (
-        <form onSubmit={handleSubmit} className="astral-card mb-8 rounded-2xl p-5">
+        <form onSubmit={handleSubmit} className="astral-card mb-8 rounded-xl p-5">
           {replyTo && (
-            <div className="mb-3 flex items-center justify-between rounded-xl bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[var(--muted)]">
+            <div className="mb-3 flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-2 text-xs text-[var(--muted)]">
               <span>
                 正在回复 <strong className="text-[var(--ink)]">@{replyTo.user.username}</strong>
               </span>
               <button
                 type="button"
                 onClick={() => setReplyTo(null)}
-                className="text-[var(--accent)] hover:underline"
+                className="cursor-pointer font-medium text-[var(--accent)] hover:underline"
               >
                 取消回复
               </button>
@@ -161,11 +159,11 @@ export function CommentsSection({
           </div>
         </form>
       ) : (
-        <div className="astral-card mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl p-5">
+        <div className="astral-card mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl p-5">
           <p className="text-sm text-[var(--muted)]">使用 GitHub 登录后即可参与评论与讨论。</p>
           <a
             href={loginHref}
-            className="inline-flex h-9 items-center justify-center rounded-xl bg-[var(--accent)] px-4 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[var(--surface)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
           >
             GitHub 登录
           </a>
@@ -173,17 +171,19 @@ export function CommentsSection({
       )}
 
       {comments.length === 0 ? (
-        <p className="py-6 text-center text-sm text-[var(--muted)]">还没有评论，来做第一个留言的人吧~</p>
+        <p className="border-y border-[var(--border)] py-8 text-center text-sm text-[var(--muted)]">
+          还没有评论，来做第一个留言的人吧~
+        </p>
       ) : (
-        <div className="space-y-4">
+        <div className="divide-y divide-[var(--border)] border-y border-[var(--border)]">
           {comments.map((comment) => (
-            <article key={comment.id} className="astral-card rounded-2xl p-5">
+            <article key={comment.id} className="py-6">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <Avatar username={comment.user.username} avatarUrl={comment.user.avatarUrl} />
                   <div>
                     <p className="text-sm font-semibold text-[var(--ink)]">{comment.user.username}</p>
-                    <time className="font-mono text-xs text-[var(--muted)]">
+                    <time className="font-mono text-xs text-[var(--muted-soft)]">
                       {formatDateTimeCN(comment.createdAt)}
                     </time>
                   </div>
@@ -193,7 +193,7 @@ export function CommentsSection({
                     <button
                       type="button"
                       onClick={() => setReplyTo(comment)}
-                      className="rounded-lg px-2 py-1 text-xs text-[var(--muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--accent)]"
+                      className="cursor-pointer rounded-lg px-2 py-1 text-xs text-[var(--muted)] transition-colors hover:bg-[var(--surface-subtle)] hover:text-[var(--accent)]"
                     >
                       回复
                     </button>
@@ -203,28 +203,31 @@ export function CommentsSection({
                       type="button"
                       onClick={() => setDeleteTargetId(comment.id)}
                       aria-label="删除评论"
-                      className="rounded-lg p-1 text-[var(--muted)] hover:bg-rose-500/10 hover:text-rose-500"
+                      className="cursor-pointer rounded-lg p-1 text-[var(--muted)] transition-colors hover:bg-rose-500/10 hover:text-rose-500"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
               </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[var(--ink)]">
+              <p className="mt-3 whitespace-pre-wrap pl-11 text-sm leading-relaxed text-[var(--ink)]">
                 {comment.content}
               </p>
 
               {comment.replies.length > 0 && (
-                <div className="mt-4 space-y-3 border-l-2 border-[var(--border)] pl-4">
+                <div className="mt-4 ml-11 space-y-3 border-l-2 border-[var(--border)] pl-4">
                   {comment.replies.map((reply) => (
-                    <div key={reply.id} className="rounded-xl bg-[var(--surface-subtle)] p-3.5">
+                    <div
+                      key={reply.id}
+                      className="rounded-lg border border-[var(--border)] bg-[var(--surface)]/80 p-3.5"
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5">
-                          <CornerDownRight className="h-3.5 w-3.5 text-[var(--accent)]" />
+                          <CornerDownRight className="h-3.5 w-3.5 text-[var(--sakura)]" />
                           <Avatar username={reply.user.username} avatarUrl={reply.user.avatarUrl} />
                           <div>
                             <p className="text-xs font-semibold text-[var(--ink)]">{reply.user.username}</p>
-                            <time className="font-mono text-[11px] text-[var(--muted)]">
+                            <time className="font-mono text-[11px] text-[var(--muted-soft)]">
                               {formatDateTimeCN(reply.createdAt)}
                             </time>
                           </div>
@@ -234,13 +237,15 @@ export function CommentsSection({
                             type="button"
                             onClick={() => setDeleteTargetId(reply.id)}
                             aria-label="删除回复"
-                            className="rounded-lg p-1 text-[var(--muted)] hover:bg-rose-500/10 hover:text-rose-500"
+                            className="cursor-pointer rounded-lg p-1 text-[var(--muted)] transition-colors hover:bg-rose-500/10 hover:text-rose-500"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </div>
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--ink)]">{reply.content}</p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--ink)]">
+                        {reply.content}
+                      </p>
                     </div>
                   ))}
                 </div>

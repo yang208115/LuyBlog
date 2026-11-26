@@ -43,4 +43,26 @@ describe("markdown rendering pipeline", () => {
     const longCjk = "测".repeat(1200);
     expect(calculateReadingTime(longCjk)).toBe(4);
   });
+
+  it("renders inline HTML elements, style/align attributes, and wraps tables", async () => {
+    const md = [
+      '<div align="center">',
+      "",
+      '<img src="https://example.com/avatar.png" style="border-radius: 50%;" alt="头像" />',
+      "",
+      "</div>",
+      "",
+      "| 技能 | 熟练度 |",
+      "|:---|:---|",
+      '| **Python** | <div style="width: 90%; background: #007bff; height: 8px; border-radius: 4px;"></div> |',
+    ].join("\n");
+
+    const result = await renderMarkdown(md);
+    expect(result.html).toContain('<div align="center">');
+    expect(result.html).toContain('style="border-radius: 50%;"');
+    expect(result.html).toContain('<div class="table-wrap"><table>');
+    expect(result.html).toContain(
+      '<div style="width: 90%; background: #007bff; height: 8px; border-radius: 4px;"></div>',
+    );
+  });
 });

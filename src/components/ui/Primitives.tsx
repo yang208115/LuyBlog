@@ -16,7 +16,7 @@ export function Button({
 }) {
   const variantClass: Record<ButtonVariant, string> = {
     primary:
-      "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] border border-transparent shadow-xs",
+      "bg-[var(--accent)] text-[var(--accent-ink)] hover:bg-[var(--accent-hover)] border border-transparent shadow-xs",
     secondary:
       "bg-[var(--surface)] text-[var(--ink)] border border-[var(--border)] hover:bg-[var(--surface-subtle)]",
     ghost: "bg-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-subtle)]",
@@ -65,7 +65,7 @@ export function Badge({
 }
 
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
-  return <div className={`astral-card rounded-2xl ${className}`}>{children}</div>;
+  return <div className={`astral-card rounded-xl ${className}`}>{children}</div>;
 }
 
 export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
@@ -110,7 +110,7 @@ export function Modal({
       onMouseDown={onClose}
     >
       <div
-        className={`astral-card w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl`}
+        className={`astral-card w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-xl p-6 shadow-2xl`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-4 border-b border-[var(--border)] pb-3">
@@ -214,7 +214,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="astral-card flex flex-col items-center justify-center rounded-2xl px-6 py-14 text-center">
+    <div className="astral-card flex flex-col items-center justify-center rounded-xl px-6 py-14 text-center">
       <p className="text-base font-semibold text-[var(--ink)]">{title}</p>
       {description && <p className="mt-1.5 max-w-md text-sm text-[var(--muted)]">{description}</p>}
       {action && <div className="mt-5">{action}</div>}

@@ -38,16 +38,22 @@ export function ArticleToc({ items }: { items: TocItem[] }) {
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
-          className="astral-card flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium text-[var(--ink)]"
+          className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--ink)] transition-colors hover:border-[var(--border-strong)]"
         >
           <span className="inline-flex items-center gap-2">
-            <List className="h-4 w-4 text-[var(--accent)]" />
-            文章目录（{items.length}）
+            <List className="h-4 w-4 text-[var(--sakura)]" />
+            <span className="font-editorial">目录</span>
+            <span className="font-mono text-xs text-[var(--muted-soft)] tabular-nums">({items.length})</span>
           </span>
-          <ChevronDown className={`h-4 w-4 transition-transform ${mobileOpen ? "rotate-180" : ""}`} />
+          <ChevronDown
+            className={`h-4 w-4 text-[var(--muted)] transition-transform ${mobileOpen ? "rotate-180" : ""}`}
+          />
         </button>
         {mobileOpen && (
-          <nav className="astral-card mt-2 rounded-xl p-3" aria-label="文章目录">
+          <nav
+            className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3"
+            aria-label="文章目录"
+          >
             <ul className="space-y-1 text-sm">
               {items.map((item) => (
                 <li key={item.id}>
@@ -58,7 +64,7 @@ export function ArticleToc({ items }: { items: TocItem[] }) {
                       item.depth === 3 ? "pl-5 text-xs" : ""
                     } ${
                       activeId === item.id
-                        ? "bg-[var(--accent-soft)] font-medium text-[var(--accent)]"
+                        ? "bg-[var(--sakura-soft)] font-medium text-[var(--sakura)]"
                         : "text-[var(--muted)] hover:text-[var(--ink)]"
                     }`}
                   >
@@ -71,31 +77,39 @@ export function ArticleToc({ items }: { items: TocItem[] }) {
         )}
       </div>
 
-      {/* 桌面端粘性目录 */}
+      {/* 桌面端留白粘性目录 */}
       <aside className="hidden lg:block">
-        <div className="astral-card max-h-[calc(100vh-7.5rem)] overflow-y-auto rounded-2xl p-4">
-          <p className="mb-3 flex items-center gap-2 font-mono text-xs font-semibold tracking-wider text-[var(--muted)] uppercase">
-            <List className="h-3.5 w-3.5 text-[var(--accent)]" />
-            On This Page
-          </p>
+        <div className="max-h-[calc(100vh-7.5rem)] overflow-y-auto pr-1">
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <p className="flex items-center gap-2 font-editorial text-sm font-semibold text-[var(--ink)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--sakura)]" aria-hidden="true" />
+              目录
+            </p>
+            <span className="font-mono text-[11px] text-[var(--muted-soft)] tabular-nums">
+              {String(items.length).padStart(2, "0")} 节
+            </span>
+          </div>
           <nav aria-label="文章目录">
-            <ul className="space-y-1 border-l border-[var(--border)] pl-3 text-sm">
-              {items.map((item) => (
-                <li key={item.id}>
-                  <a
-                    href={`#${item.id}`}
-                    className={`block rounded-r-lg py-1 transition-colors ${
-                      item.depth === 3 ? "pl-3 text-xs" : "text-[13px]"
-                    } ${
-                      activeId === item.id
-                        ? "font-medium text-[var(--accent)]"
-                        : "text-[var(--muted)] hover:text-[var(--ink)]"
-                    }`}
-                  >
-                    {item.text}
-                  </a>
-                </li>
-              ))}
+            <ul className="space-y-1.5 border-l border-[var(--border)] text-sm">
+              {items.map((item) => {
+                const isActive = activeId === item.id;
+                return (
+                  <li key={item.id}>
+                    <a
+                      href={`#${item.id}`}
+                      className={`block py-1 leading-snug transition-colors ${
+                        item.depth === 3 ? "pl-5 text-xs" : "pl-3 text-[13px]"
+                      } ${
+                        isActive
+                          ? "-ml-px border-l-2 border-l-[var(--sakura)] font-medium text-[var(--ink)]"
+                          : "text-[var(--muted)] hover:text-[var(--ink)]"
+                      }`}
+                    >
+                      {item.text}
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
         </div>

@@ -107,10 +107,51 @@ function getHighlighter(): Promise<HighlighterCore> {
 
 export const markdownSanitizeSchema: SanitizeOptions = {
   ...defaultSchema,
+  tagNames: [
+    ...(defaultSchema.tagNames ?? []),
+    "figure",
+    "figcaption",
+    "video",
+    "audio",
+    "source",
+    "progress",
+    "meter",
+    "mark",
+    "iframe",
+  ],
   attributes: {
     ...defaultSchema.attributes,
+    "*": [...(defaultSchema.attributes?.["*"] ?? []), "style", "className", "align"],
     code: [...(defaultSchema.attributes?.code ?? []), ["className", /^language-[a-z0-9-]+$/i]],
     img: [...(defaultSchema.attributes?.img ?? []), "src", "alt", "width", "height", "title", "loading"],
+    a: [...(defaultSchema.attributes?.a ?? []), "target", "rel"],
+    video: [
+      "src",
+      "poster",
+      "controls",
+      "autoplay",
+      "loop",
+      "muted",
+      "playsInline",
+      "width",
+      "height",
+      "preload",
+    ],
+    audio: ["src", "controls", "autoplay", "loop", "muted", "preload"],
+    source: ["src", "type"],
+    progress: ["value", "max"],
+    meter: ["value", "min", "max", "low", "high", "optimum"],
+    iframe: [
+      "src",
+      "title",
+      "width",
+      "height",
+      "allow",
+      "allowFullScreen",
+      "frameBorder",
+      "loading",
+      "referrerPolicy",
+    ],
   },
 };
 
@@ -226,6 +267,19 @@ function walkAndTransform(
         parentChildren[i] = createCopyableCodeBlock(rawLang || "text", preElement);
         continue;
       }
+    }
+
+    if (node.tagName === "table") {
+      if (node.children.length > 0) {
+        walkAndTransform(node.children, toc, highlighter);
+      }
+      parentChildren[i] = {
+        type: "element",
+        tagName: "div",
+        properties: { className: ["table-wrap"] },
+        children: [node],
+      };
+      continue;
     }
 
     if (node.children.length > 0) {

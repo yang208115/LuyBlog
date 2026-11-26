@@ -13,6 +13,13 @@ import {
   Sun,
   X,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/Primitives";
+import { useTheme } from "@/components/ui/ThemeContext";
+import { useToast } from "@/components/ui/Toast";
+import { getBootstrapFn } from "@/server/functions/public";
+import { getCurrentYearCN } from "@/shared/date";
+import type { SiteConfig } from "@/shared/siteConfig";
 
 function GitHubIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
@@ -21,14 +28,6 @@ function GitHubIcon({ className = "h-4 w-4" }: { className?: string }) {
     </svg>
   );
 }
-
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/Primitives";
-import { useTheme } from "@/components/ui/ThemeContext";
-import { useToast } from "@/components/ui/Toast";
-import { getBootstrapFn } from "@/server/functions/public";
-import { getCurrentYearCN } from "@/shared/date";
-import type { SiteConfig } from "@/shared/siteConfig";
 
 function isExternalUrl(path: string): boolean {
   return /^(https?:)?\/\//.test(path) || path.startsWith("mailto:") || path.startsWith("tel:");
@@ -40,25 +39,6 @@ function formatUptime(buildDate: string): string {
   const hour = 60 * 60 * 1000;
   const day = 24 * hour;
   return `${Math.floor(elapsed / day)} 天 ${Math.floor((elapsed % day) / hour)} 小时`;
-}
-
-function badgeColorClass(color: string): string {
-  switch (color.toLowerCase()) {
-    case "sakura":
-    case "pink":
-      return "bg-[var(--sakura)]";
-    case "amber":
-    case "orange":
-      return "bg-amber-500";
-    case "emerald":
-    case "green":
-      return "bg-emerald-500";
-    case "cyan":
-    case "sky":
-      return "bg-sky-500";
-    default:
-      return "bg-[var(--accent)]";
-  }
 }
 
 export const Route = createFileRoute("/_public")({
@@ -84,6 +64,7 @@ function PublicLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(location.pathname);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
 
   if (prevPathname !== location.pathname) {
     setPrevPathname(location.pathname);
@@ -117,6 +98,26 @@ function PublicLayout() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [navigate]);
 
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onMouseDown = (event: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setAccountOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("keydown", onEscape);
+    return () => {
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("keydown", onEscape);
+    };
+  }, [accountOpen]);
+
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setAccountOpen(false);
@@ -128,33 +129,30 @@ function PublicLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--bg)]/88 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
               aria-label="打开菜单"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] md:hidden"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] md:hidden"
             >
               <Menu className="h-4 w-4" />
             </button>
 
             <Link to="/" className="group flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--sakura)] text-sm font-bold text-white shadow-xs">
+              <span className="relative flex h-7 w-7 items-center justify-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] font-editorial text-xs font-semibold text-[var(--ink)] transition-colors group-hover:border-[var(--accent)]">
                 {siteConfig.authorName.slice(0, 1)}
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-[var(--sakura)]"
+                />
               </span>
-              <span className="flex flex-col leading-tight">
-                <span className="text-sm font-bold tracking-tight text-[var(--ink)]">
-                  {siteConfig.navTitle}
-                  <em className="mx-0.5 font-normal text-[var(--sakura)] not-italic">
-                    {siteConfig.navSuffix}
-                  </em>
-                  {siteConfig.navAfter}
-                </span>
-                <span className="hidden font-mono text-[10px] tracking-widest text-[var(--muted)] sm:block">
-                  ASTRAL MIST GARDEN
-                </span>
+              <span className="font-editorial text-base font-semibold tracking-wide text-[var(--ink)]">
+                {siteConfig.navTitle}
+                <em className="mx-0.5 font-normal text-[var(--sakura)] not-italic">{siteConfig.navSuffix}</em>
+                {siteConfig.navAfter}
               </span>
             </Link>
           </div>
@@ -167,7 +165,7 @@ function PublicLayout() {
                   href={item.path}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-subtle)] hover:text-[var(--ink)]"
+                  className="inline-flex items-center gap-1 px-3 py-2 text-sm text-[var(--muted)] transition-colors hover:text-[var(--ink)]"
                 >
                   {item.label}
                   <ExternalLink className="h-3 w-3 opacity-60" />
@@ -177,10 +175,14 @@ function PublicLayout() {
                   key={item.id}
                   to={item.path}
                   activeProps={{
-                    className: "bg-[var(--accent-soft)] text-[var(--accent)]",
+                    className:
+                      "font-medium text-[var(--ink)] after:absolute after:inset-x-3 after:bottom-0.5 after:h-[2px] after:rounded-full after:bg-[var(--sakura)] after:content-['']",
+                  }}
+                  inactiveProps={{
+                    className: "text-[var(--muted)]",
                   }}
                   activeOptions={{ exact: item.path === "/" }}
-                  className="rounded-xl px-3 py-1.5 text-sm font-medium text-[var(--muted)] transition-colors hover:bg-[var(--surface-subtle)] hover:text-[var(--ink)]"
+                  className="relative px-3 py-2 text-sm transition-colors hover:text-[var(--ink)]"
                 >
                   {item.label}
                 </Link>
@@ -188,46 +190,45 @@ function PublicLayout() {
             )}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Link
               to="/search"
               search={{}}
               aria-label="全站搜索"
-              className="inline-flex h-9 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--ink)]"
+              className="inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs text-[var(--muted)] transition-colors hover:bg-[var(--surface-subtle)] hover:text-[var(--ink)]"
             >
               <Search className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">搜索</span>
-              <kbd className="hidden rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 font-mono text-[10px] sm:inline">
+              <kbd className="hidden rounded border border-[var(--border)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--muted-soft)] sm:inline">
                 ⌘K
               </kbd>
             </Link>
+
+            <span className="h-4 w-px bg-[var(--border)]" aria-hidden="true" />
 
             <button
               type="button"
               onClick={toggleTheme}
               aria-label="切换浅色/深色主题"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--ink)]"
+              className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-[var(--surface-subtle)] hover:text-[var(--ink)]"
             >
               <Sun className="hidden h-4 w-4 dark:block" />
               <Moon className="block h-4 w-4 dark:hidden" />
             </button>
 
             {user ? (
-              <div className="relative">
+              <div ref={accountMenuRef} className="relative">
                 <button
                   type="button"
                   onClick={() => setAccountOpen((v) => !v)}
-                  className="flex h-9 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-2 transition-colors hover:border-[var(--accent)]"
+                  className="flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 transition-colors hover:border-[var(--border-strong)]"
                   aria-label="账户菜单"
+                  aria-expanded={accountOpen}
                 >
                   {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.username}
-                      className="h-6 w-6 rounded-lg object-cover"
-                    />
+                    <img src={user.avatarUrl} alt={user.username} className="h-5 w-5 rounded object-cover" />
                   ) : (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-xs font-semibold text-[var(--accent)]">
+                    <span className="flex h-5 w-5 items-center justify-center rounded bg-[var(--accent-soft)] text-[11px] font-semibold text-[var(--accent)]">
                       {user.username.slice(0, 1).toUpperCase()}
                     </span>
                   )}
@@ -237,11 +238,11 @@ function PublicLayout() {
                 </button>
 
                 {accountOpen && (
-                  <div className="astral-card absolute right-0 mt-2 w-44 rounded-2xl p-1.5 shadow-xl">
+                  <div className="astral-card absolute right-0 mt-2 w-44 rounded-xl p-1.5 shadow-xl">
                     {user.role === "admin" && (
                       <Link
                         to="/admin"
-                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-subtle)]"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-subtle)]"
                       >
                         <Settings className="h-3.5 w-3.5 text-[var(--accent)]" />
                         内容工作台
@@ -250,7 +251,7 @@ function PublicLayout() {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
                     >
                       <LogOut className="h-3.5 w-3.5" />
                       退出登录
@@ -261,7 +262,7 @@ function PublicLayout() {
             ) : (
               <a
                 href={loginUrl}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--accent)] px-3 text-xs font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[var(--ink)] px-3 text-xs font-medium text-[var(--surface)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
               >
                 <GitHubIcon className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">登录</span>
@@ -275,23 +276,25 @@ function PublicLayout() {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
-            className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs"
+            className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="astral-card fixed inset-y-0 left-0 flex w-72 flex-col justify-between p-5 shadow-2xl">
+          <aside className="fixed inset-y-0 left-0 flex w-72 flex-col justify-between border-r border-[var(--border)] bg-[var(--bg)] p-6 shadow-2xl">
             <div>
-              <div className="mb-6 flex items-center justify-between">
-                <span className="font-bold text-[var(--ink)]">{siteConfig.title}</span>
+              <div className="mb-6 flex items-center justify-between border-b border-[var(--border)] pb-4">
+                <span className="font-editorial text-base font-semibold text-[var(--ink)]">
+                  {siteConfig.title}
+                </span>
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
                   aria-label="关闭菜单"
-                  className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--surface-subtle)]"
+                  className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--ink)]"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <nav className="space-y-1">
+              <nav className="divide-y divide-[var(--border)]" aria-label="移动端导航">
                 {navItems.map((item) =>
                   isExternalUrl(item.path) ? (
                     <a
@@ -299,7 +302,7 @@ function PublicLayout() {
                       href={item.path}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--ink)]"
+                      className="flex items-center justify-between py-3 text-sm text-[var(--muted)] transition-colors hover:text-[var(--ink)]"
                     >
                       {item.label}
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -308,9 +311,14 @@ function PublicLayout() {
                     <Link
                       key={item.id}
                       to={item.path}
-                      activeProps={{ className: "bg-[var(--accent-soft)] text-[var(--accent)]" }}
+                      activeProps={{
+                        className: "border-l-2 border-[var(--sakura)] pl-3 font-medium text-[var(--ink)]",
+                      }}
+                      inactiveProps={{
+                        className: "text-[var(--muted)]",
+                      }}
                       activeOptions={{ exact: item.path === "/" }}
-                      className="block rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--ink)]"
+                      className="block py-3 text-sm transition-colors hover:text-[var(--ink)]"
                     >
                       {item.label}
                     </Link>
@@ -329,7 +337,7 @@ function PublicLayout() {
         </div>
       )}
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <Outlet />
       </main>
 
@@ -364,43 +372,46 @@ function SiteFooter({ siteConfig }: { siteConfig: SiteConfig }) {
     void navigator.clipboard.writeText(value).then(() => toast(`已复制 ${label}：${value}`, "success"));
   };
 
+  const linkClass =
+    "inline-flex items-center gap-1.5 text-xs text-[var(--muted)] underline-offset-4 transition-colors hover:text-[var(--ink)] hover:underline";
+
   return (
-    <footer className="mt-16 border-t border-[var(--border)] bg-[var(--surface)]/70">
+    <footer className="mt-16 border-t border-[var(--border-strong)] bg-[var(--surface)]/55">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 font-mono text-xs text-[var(--muted)]">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+        <div className="flex flex-col justify-between gap-8 md:flex-row md:items-start">
+          <div className="space-y-2.5">
+            <p className="font-editorial text-lg font-semibold text-[var(--ink)]">{siteConfig.title}</p>
+            {siteConfig.bio && (
+              <p className="line-clamp-2 max-w-md text-xs leading-relaxed text-[var(--muted)]">
+                {siteConfig.bio}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px] text-[var(--muted)]">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 {clock}
               </span>
               {uptime && (
-                <span className="text-xs text-[var(--muted)]">
-                  已稳定运行 <strong className="font-mono text-[var(--ink)]">{uptime}</strong>
-                </span>
+                <>
+                  <span className="text-[var(--muted-soft)]" aria-hidden="true">
+                    ·
+                  </span>
+                  <span>
+                    已稳定运行 <strong className="font-medium text-[var(--ink)]">{uptime}</strong>
+                  </span>
+                </>
               )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {siteConfig.footerBadges.map((badge) => (
-                <span
-                  key={badge.name}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-0.5 font-mono text-[11px] text-[var(--muted)]"
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${badgeColorClass(badge.color)}`} />
-                  {badge.name}
-                </span>
-              ))}
             </div>
           </div>
 
           {/* 完整渲染所有配置的 7 个社交链接 */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 md:max-w-md md:justify-end">
             {siteConfig.social.github && (
               <a
                 href={siteConfig.social.github}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--ink)]"
+                className={linkClass}
               >
                 <GitHubIcon className="h-3.5 w-3.5" />
                 GitHub
@@ -411,7 +422,7 @@ function SiteFooter({ siteConfig }: { siteConfig: SiteConfig }) {
                 href={siteConfig.social.demo}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--ink)]"
+                className={linkClass}
               >
                 <Globe className="h-3.5 w-3.5" />
                 Demo
@@ -422,7 +433,7 @@ function SiteFooter({ siteConfig }: { siteConfig: SiteConfig }) {
                 href={siteConfig.social.gitee}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--ink)]"
+                className={linkClass}
               >
                 Gitee
               </a>
@@ -432,16 +443,13 @@ function SiteFooter({ siteConfig }: { siteConfig: SiteConfig }) {
                 href={siteConfig.social.google}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--ink)]"
+                className={linkClass}
               >
                 Google
               </a>
             )}
             {siteConfig.social.email && (
-              <a
-                href={`mailto:${siteConfig.social.email}`}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--ink)]"
-              >
+              <a href={`mailto:${siteConfig.social.email}`} className={linkClass}>
                 <Mail className="h-3.5 w-3.5" />
                 Email
               </a>
@@ -450,7 +458,7 @@ function SiteFooter({ siteConfig }: { siteConfig: SiteConfig }) {
               <button
                 type="button"
                 onClick={() => copyContact("QQ", siteConfig.social.qq)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--ink)]"
+                className={`${linkClass} cursor-pointer`}
               >
                 <MessageCircle className="h-3.5 w-3.5" />
                 QQ: {siteConfig.social.qq}
@@ -460,18 +468,13 @@ function SiteFooter({ siteConfig }: { siteConfig: SiteConfig }) {
               <button
                 type="button"
                 onClick={() => copyContact("微信", siteConfig.social.wechat)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--ink)]"
+                className={`${linkClass} cursor-pointer`}
               >
                 <MessageCircle className="h-3.5 w-3.5" />
                 微信: {siteConfig.social.wechat}
               </button>
             )}
-            <a
-              href="/rss.xml"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--ink)]"
-            >
+            <a href="/rss.xml" target="_blank" rel="noopener noreferrer" className={linkClass}>
               <Rss className="h-3.5 w-3.5 text-[var(--sakura)]" />
               RSS
             </a>
@@ -479,9 +482,26 @@ function SiteFooter({ siteConfig }: { siteConfig: SiteConfig }) {
         </div>
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-6 text-xs text-[var(--muted)]">
-          <p>
-            © {getCurrentYearCN()} {siteConfig.title} · {siteConfig.authorName}
-          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <p>
+              © {getCurrentYearCN()} {siteConfig.title} · {siteConfig.authorName}
+            </p>
+            {siteConfig.footerBadges.length > 0 && (
+              <>
+                <span className="hidden text-[var(--border-strong)] sm:inline" aria-hidden="true">
+                  /
+                </span>
+                <p className="flex flex-wrap items-center gap-x-2 font-mono text-[11px] text-[var(--muted-soft)]">
+                  {siteConfig.footerBadges.map((badge, index) => (
+                    <span key={badge.name} className="inline-flex items-center gap-2">
+                      {index > 0 && <span aria-hidden="true">·</span>}
+                      <span>{badge.name}</span>
+                    </span>
+                  ))}
+                </p>
+              </>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <a href="/sitemap.xml" className="hover:text-[var(--ink)]">
               Sitemap

@@ -51,5 +51,14 @@ describe("security validators", () => {
     expect(normalized.defaultPostCover).toBe("");
     expect(normalized.social.demo).toBe("");
     expect(normalized.heroImage).toBe("/anime-night-studio.png");
+    expect(normalized.heroImageLight).toBe("/anime-day-studio.png");
+  });
+
+  it("handles heroImageLight inference and explicit empty override", () => {
+    expect(
+      normalizeSiteConfig({ heroImage: "/anime-night-studio.png", heroImageLight: "" }).heroImageLight,
+    ).toBe("");
+    expect(normalizeSiteConfig({ heroImage: "https://example.com/custom-hero.png" }).heroImageLight).toBe("");
+    expect(normalizeSiteConfig({ heroImage: "" }).heroImageLight).toBe("");
   });
 });

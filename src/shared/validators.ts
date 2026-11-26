@@ -186,6 +186,7 @@ export const SiteConfigSchema = z.object({
   navAfter: z.string().trim().max(40),
   avatarUrl: optionalSafeUrlSchema,
   heroImage: optionalSafeUrlSchema,
+  heroImageLight: optionalSafeUrlSchema.default(""),
   defaultPostCover: optionalSafeUrlSchema,
   social: z.object({
     github: optionalSafeUrlSchema,

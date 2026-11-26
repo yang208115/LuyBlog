@@ -7,6 +7,14 @@ import { Button, Card, EmptyState, Input, Modal, Textarea } from "@/components/u
 import { useToast } from "@/components/ui/Toast";
 import { applyFriendLinkFn, getFriendLinksFn } from "@/server/functions/public";
 
+function extractHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url.replace(/^https?:\/\//, "").split("/")[0] ?? url;
+  }
+}
+
 function FriendAvatar({ src, name }: { src: string | null; name: string }) {
   const [failed, setFailed] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -25,13 +33,13 @@ function FriendAvatar({ src, name }: { src: string | null; name: string }) {
         src={src}
         alt={name}
         onError={() => setFailed(true)}
-        className="h-12 w-12 shrink-0 rounded-xl border border-[var(--border)] object-cover"
+        className="h-11 w-11 shrink-0 rounded-lg border border-[var(--border)] object-cover"
       />
     );
   }
 
   return (
-    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-base font-bold text-[var(--accent)]">
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)] font-editorial text-base font-semibold text-[var(--ink)]">
       {name.slice(0, 1).toUpperCase()}
     </span>
   );
@@ -98,17 +106,37 @@ function FriendsPage() {
   };
 
   return (
-    <div className="space-y-10">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--border)] pb-6">
-        <div>
-          <p className="font-mono text-xs tracking-wider text-[var(--sakura)] uppercase">NEIGHBORS / 友链</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-[var(--ink)]">互联网邻居</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">在算法推荐之外，仍然有人认真维护属于自己的角落。</p>
+    <div className="mx-auto max-w-5xl editorial-enter space-y-10">
+      <header>
+        <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] pb-3">
+          <div className="flex items-center gap-2 text-xs tracking-wide text-[var(--muted)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--sakura)]" aria-hidden="true" />
+            <span>友邻名录</span>
+          </div>
+          <span className="font-mono text-[11px] text-[var(--muted-soft)] tabular-nums">
+            已收录 {data.items.length} 位邻居
+          </span>
         </div>
-        <Button type="button" onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4" />
-          申请友链
-        </Button>
+
+        <div className="flex flex-wrap items-end justify-between gap-6 border-b border-[var(--border)] pt-6 pb-8">
+          <div>
+            <h1 className="font-editorial text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
+              互联网邻居
+            </h1>
+            <div className="my-4 h-[2px] w-8 bg-[var(--sakura)]" aria-hidden="true" />
+            <p className="text-sm leading-relaxed text-[var(--muted)]">
+              在算法推荐之外，仍然有人认真维护属于自己的角落。
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[var(--surface)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+          >
+            <Plus className="h-4 w-4" />
+            申请友链
+          </button>
+        </div>
       </header>
 
       {data.items.length === 0 ? (
@@ -123,16 +151,19 @@ function FriendsPage() {
               rel="noopener noreferrer"
               className="group block"
             >
-              <Card className="flex items-start gap-3.5 p-4 transition-all hover:border-[var(--accent)]">
+              <Card className="flex h-full items-start gap-3.5 p-4 transition-colors hover:border-[var(--border-strong)]">
                 <FriendAvatar src={friend.avatarUrl} name={friend.name} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <h2 className="truncate text-sm font-bold text-[var(--ink)] group-hover:text-[var(--accent)]">
+                    <h2 className="font-editorial truncate text-base font-semibold text-[var(--ink)] transition-colors group-hover:text-[var(--accent)]">
                       {friend.name}
                     </h2>
-                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--muted)] opacity-0 transition-opacity group-hover:opacity-100" />
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--muted-soft)] opacity-0 transition-opacity group-hover:opacity-100" />
                   </div>
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--muted)]">
+                  <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--muted-soft)]">
+                    {extractHost(friend.url)}
+                  </p>
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-[var(--muted)]">
                     {friend.description || "一个认真维护的小角落。"}
                   </p>
                 </div>
@@ -143,21 +174,23 @@ function FriendsPage() {
       )}
 
       {/* 本站信息与交换说明 */}
-      <Card className="p-6">
+      <section className="rounded-xl border border-[var(--border)] border-l-2 border-l-[var(--accent)] bg-[var(--surface)] p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="font-mono text-xs tracking-wider text-[var(--accent)] uppercase">EXCHANGE INFO</p>
-            <h2 className="mt-1 text-lg font-bold text-[var(--ink)]">本站友链信息</h2>
+            <h2 className="font-editorial text-lg font-semibold text-[var(--ink)]">交换友链</h2>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              欢迎在申请前将本站加入你的友链列表，以下格式可直接复制使用。
+            </p>
           </div>
           <Button type="button" variant="secondary" size="sm" onClick={handleCopyFormat}>
             <Copy className="h-3.5 w-3.5" />
             复制申请格式
           </Button>
         </div>
-        <pre className="mt-4 overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 font-mono text-xs leading-relaxed text-[var(--ink)]">
+        <pre className="mt-4 overflow-x-auto rounded-lg border border-[var(--code-border)] bg-[var(--code-bg)] p-4 font-mono text-xs leading-relaxed text-[var(--ink)]">
           {data.applyFormat}
         </pre>
-      </Card>
+      </section>
 
       <Modal
         open={open}

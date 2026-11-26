@@ -33,15 +33,25 @@ function AboutPage() {
   const page = Route.useLoaderData();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <header className="border-b border-[var(--border)] pb-6">
-        <p className="font-mono text-xs tracking-wider text-[var(--accent)] uppercase">ABOUT / 关于</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-[var(--ink)]">
-          {page?.title ?? "关于我"}
-        </h1>
+    <div className="mx-auto max-w-3xl editorial-enter space-y-8">
+      <header>
+        <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] pb-3">
+          <div className="flex items-center gap-2 text-xs tracking-wide text-[var(--muted)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--sakura)]" aria-hidden="true" />
+            <span>关于本站</span>
+          </div>
+          <span className="font-mono text-[11px] text-[var(--muted-soft)]">ABOUT</span>
+        </div>
+
+        <div className="border-b border-[var(--border)] pt-6 pb-7">
+          <h1 className="font-editorial text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
+            {page?.title ?? "关于我"}
+          </h1>
+          <div className="mt-4 h-[2px] w-8 bg-[var(--sakura)]" aria-hidden="true" />
+        </div>
       </header>
 
-      <Card className="p-6 sm:p-8">
+      <Card className="p-6 sm:p-9">
         <ArticleHtml html={page?.html ?? FALLBACK_ABOUT_HTML} />
       </Card>
     </div>
