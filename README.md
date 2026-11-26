@@ -1,194 +1,80 @@
-# LuyBlog
+# LuyBlog v2
 
-LuyBlog 是我给自己写的个人博客系统，运行在 Cloudflare Workers + D1 上。它不是一个纯静态博客，而是带完整后台的内容管理应用：文章、页面、瞬间、项目、友链、评论、站点配置和导航栏都可以在后台维护。
+LuyBlog v2 是运行在 **Cloudflare Workers** 上的全栈个人博客系统，基于 **TanStack Start + React 19 + Cloudflare D1 + R2 + Turnstile + Tailwind CSS v4** 构建。
 
-这个项目的目标很简单：把个人站点需要的东西尽量收在一个轻量、可部署、可维护的代码仓库里。
+## 核心特性
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-
-## 主要功能
-
-- 博客文章：Markdown 内容、分类、标签、封面、阅读时间、访问量
-- AI 写作助手：支持多轮问答、正文插入，以及标题、slug、摘要、分类和标签补全
-- 独立页面：后台新建页面后可直接通过 `/:slug` 访问，例如 `/about`、`/test`
-- 瞬间动态：适合发短内容、日常记录和图片
-- 项目展示：维护项目名称、描述、图标、标签和排序
-- 友链系统：支持前台展示和友链申请
-- 评论系统：支持文章评论、后台审核和状态管理
-- 导航栏管理：独立后台模块，可新增、删除、排序和启停导航入口
-- 站点配置：标题、头像、背景图、社交链接、备案信息、AI 配置等
-- GitHub 登录：GitHub OAuth 登录，管理员进入后台
-- SEO：RSS、sitemap、robots、SSR HTML 模板
-
-## 技术栈
-
-- Runtime：Cloudflare Workers
-- Database：Cloudflare D1
-- Backend：Hono、Drizzle ORM、Zod
-- Frontend：React 18、Vite、Material UI、React Query
-- Markdown：react-markdown、remark-gfm、rehype-raw
-- Auth：GitHub OAuth
-- Deploy：Wrangler
+- **真 SSR 与动态 SEO**：基于 TanStack Start + `@cloudflare/vite-plugin`，所有文章/页面服务端直出独立标题、Meta、Open Graph 与 JSON-LD；`/rss.xml`、`/sitemap.xml` 与 `/robots.txt` 动态读库生成。
+- **零客户端代码高亮开销**：服务端采用纯 JS 引擎 Shiki（`github-light` / `tokyo-night` 双主题）预渲染代码块，自动生成锚点与右侧粘性 TOC 目录及阅读时间。
+- **路由级自动拆包**：管理后台 `/admin/*` 与 `@dnd-kit` 按路由隔离，前台首屏仅加载轻量化阅读所需 JS。
+- **D1 兼容与 FTS5 搜索**：100% 兼容历史迁移 `0000`–`0014`，新增 `0015_v2_enhancements.sql` 提供 `search_fts` 全文检索、持久化瞬间点赞与窗口限流。
+- **Cloudflare R2 图床**：支持后台媒体库管理，以及文章编辑器拖拽/粘贴直传图片至 R2（5 MB 上限 + 文件头魔数校验）。
+- **安全与认证**：GitHub OAuth + `HttpOnly` Cookie Session（库内仅存 SHA-256 哈希）、`ADMIN_GITHUB_ID` 自动提权、Turnstile 保护评论与友链申请、全站 URL `http(s)://` 白名单校验。
+- **星雾素笺设计系统**：前后台统一使用 Tailwind CSS v4 双主题（晴空素笺 / 夜樱星幕）。
 
 ## 本地开发
 
-先安装依赖：
+1. 安装依赖：
 
 ```bash
 pnpm install
 ```
 
-复制本地环境变量：
+2. 配置本地环境变量（参考 [env.example](./env.example)）：
 
 ```bash
 cp env.example .dev.vars
 ```
 
-至少需要配置：
+至少填写 `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`，本地开发可将 `APP_BASE_URL` 设为 `http://localhost:5173`，并将 GitHub OAuth App 的回调地址配置为 `http://localhost:5173/auth/callback`。如需本地自动获得管理员权限，可设置 `ADMIN_GITHUB_ID`。
 
-```bash
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
-APP_BASE_URL=http://localhost:8787
-```
-
-初始化本地 D1：
+3. 应用本地 D1 数据库迁移：
 
 ```bash
 pnpm db:migrate
 ```
 
-启动开发环境：
+4. 启动开发服务器（单端口直接运行在 Cloudflare workerd 运行时）：
 
 ```bash
 pnpm dev
 ```
 
-常用访问地址：
-
-- 完整 Worker 应用：http://localhost:8787
-- Vite 前端开发服务：http://localhost:5173
-- API 文档：http://localhost:8787/doc
-- 管理后台：http://localhost:8787/admin
-
-GitHub OAuth 的本地回调地址使用：
-
-```text
-http://localhost:8787/auth/callback
-```
-
 ## 常用命令
 
 ```bash
-pnpm dev                # 同时启动 Worker 和 Vite
-pnpm typecheck          # TypeScript 类型检查
-pnpm test               # 运行测试
-pnpm build              # 构建客户端和服务端产物
-pnpm db:migrate         # 应用本地 D1 迁移
-pnpm db:migrate:prod    # 应用生产 D1 迁移
-pnpm deploy             # 构建并部署到 Cloudflare
+pnpm dev              # 启动本地全栈开发服务器 (http://localhost:5173)
+pnpm typecheck        # TypeScript 类型检查
+pnpm lint             # Biome 代码静态检查
+pnpm format           # Biome 自动格式化
+pnpm test             # 运行 Vitest 单元测试
+pnpm build            # 构建客户端与 Cloudflare Worker 服务端产物
+pnpm db:migrate       # 应用本地 D1 迁移
+pnpm db:migrate:prod  # 应用生产 D1 迁移
+pnpm deploy           # 以 CLOUDFLARE_ENV=production 构建并部署到 Cloudflare Workers
 ```
 
-## 后台内容
+## 生产部署准备
 
-后台目前按模块管理：
-
-- 仪表盘：站点内容和运营数据概览
-- 站点配置：站点文案、图片、社交链接、AI 参数
-- 导航栏：前台导航入口、链接、排序和启停
-- 文章：博客文章发布和编辑，支持 AI 问答、元信息补全和分类标签建议
-- 瞬间：短内容管理
-- 项目：项目展示内容
-- 页面：独立 Markdown 页面
-- 友链：友链站点和申请内容
-- 评论：评论审核
-- 用户：用户角色和状态管理
-
-## 动态页面
-
-后台「页面」模块创建的内容会按 slug 暴露为前台页面。
-
-例如新建页面：
-
-```text
-slug: test
-title: 测试页面
-```
-
-保存发布后即可访问：
-
-```text
-http://localhost:8787/test
-```
-
-固定业务路由如 `/blog`、`/admin` 会优先匹配，普通页面路由作为最后的兜底。
-
-## 数据库
-
-数据库 schema 在 [src/db/schema.ts](./src/db/schema.ts)，迁移文件在 [drizzle](./drizzle)。
-
-本地迁移：
+1. 确认在 Cloudflare 创建了 R2 存储桶 `luyblog-media`（与 [wrangler.jsonc](./wrangler.jsonc) 中 `env.production.r2_buckets` 一致）。
+2. 为生产 Worker 注入隐私 Secrets（勿将 `TURNSTILE_SECRET` 写入 `wrangler.jsonc` 的 `vars`，以免与 Secret 冲突）：
 
 ```bash
-pnpm db:migrate
+pnpm exec wrangler secret put GITHUB_CLIENT_ID --env production
+pnpm exec wrangler secret put GITHUB_CLIENT_SECRET --env production
+pnpm exec wrangler secret put TURNSTILE_SECRET --env production
 ```
 
-生产迁移：
+3. 在 [wrangler.jsonc](./wrangler.jsonc) 的 `env.production.vars` 中填入公开的 `TURNSTILE_SITE_KEY`（并保持 `TURNSTILE_HOSTNAMES` 仅包含线上域名 `blog.lyuy.top`）。
+4. 执行生产 D1 迁移并部署（`pnpm deploy` 会在构建时通过 `CLOUDFLARE_ENV=production` 生成针对生产环境扁平化的 `dist/server/wrangler.json` 后直接执行 `wrangler deploy`）：
 
 ```bash
 pnpm db:migrate:prod
-```
-
-部分配置类数据会在接口访问时自动补表或回退默认值，用来减少首次部署时的空数据问题。不过正式部署仍然建议先跑完整迁移。
-
-## 生产部署
-
-1. 在 Cloudflare 创建 D1 数据库。
-2. 修改 [wrangler.jsonc](./wrangler.jsonc) 里的生产 `database_id` 和 `APP_BASE_URL`。
-3. 在 Cloudflare 控制台配置 GitHub OAuth 相关变量或 secrets。
-4. 执行生产迁移：
-
-```bash
-pnpm db:migrate:prod
-```
-
-5. 部署：
-
-```bash
 pnpm deploy
 ```
 
-可选变量：
-
-- `QWEATHER_KEY`：天气接口使用
-
-AI 的 API Key、Base URL、模型和提示词已经迁移到后台「站点配置」里维护。
-
-## 目录结构
-
-```text
-common/             # 前后端共享校验 schema
-docs/               # 详细文档
-drizzle/            # D1 迁移和种子数据
-frontend/           # React 前端
-frontend/src/admin  # 管理后台页面
-frontend/src/pages  # 前台页面
-src/                # Hono Worker 后端
-src/db              # Drizzle schema
-src/routes          # API 路由
-src/services        # 服务逻辑
-```
-
-## 文档
-
-- [安装配置指南](./docs/INSTALLATION.md)
-- [认证配置指南](./docs/AUTHENTICATION.md)
-- [开发指南](./docs/DEVELOPMENT.md)
-- [主题定制指南](./docs/THEMING.md)
-- [API 开发指南](./docs/API_GUIDE.md)
-- [部署指南](./docs/DEPLOYMENT.md)
-- [SEO 配置指南](./docs/SEO_GUIDE.md)
+> 首次上线后可登录 `/admin/settings` 点击「重建全站搜索索引」，将历史文章、页面、瞬间、项目与友链写入 `search_fts`。
 
 ## License
 
-本项目采用 [MIT](./LICENSE) 协议进行许可。
+[MIT](./LICENSE)

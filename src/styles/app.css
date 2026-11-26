@@ -1,0 +1,373 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #f6f4ef;
+  --surface: #fcfbf8;
+  --surface-subtle: #eeebe3;
+  --border: rgba(28, 29, 34, 0.11);
+  --border-strong: rgba(28, 29, 34, 0.22);
+  --ink: #1a1c22;
+  --muted: #636770;
+  --muted-soft: #8c8f96;
+  --accent: #2d4a86;
+  --accent-hover: #203766;
+  --accent-soft: rgba(45, 74, 134, 0.08);
+  --accent-ink: #fcfbf8;
+  --sakura: #c45c7d;
+  --sakura-soft: rgba(196, 92, 125, 0.09);
+  --lamp: #c97b4b;
+  --mist-indigo: rgba(45, 74, 134, 0.045);
+  --mist-sakura: rgba(196, 92, 125, 0.035);
+  --code-bg: #f1eee7;
+  --code-border: rgba(28, 29, 34, 0.12);
+  --font-serif:
+    "Newsreader", "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STZhongsong", Georgia, serif;
+  --font-sans:
+    "Inter", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --bg: #12141c;
+  --surface: #191c26;
+  --surface-subtle: #222634;
+  --border: rgba(236, 231, 222, 0.1);
+  --border-strong: rgba(236, 231, 222, 0.2);
+  --ink: #ece8df;
+  --muted: #9a9ea8;
+  --muted-soft: #6f7480;
+  --accent: #8ca8e8;
+  --accent-hover: #a6bdf0;
+  --accent-soft: rgba(140, 168, 232, 0.13);
+  --accent-ink: #11141d;
+  --sakura: #e588a6;
+  --sakura-soft: rgba(229, 136, 166, 0.13);
+  --lamp: #e29a6a;
+  --mist-indigo: rgba(140, 168, 232, 0.07);
+  --mist-sakura: rgba(229, 136, 166, 0.05);
+  --code-bg: #151822;
+  --code-border: rgba(236, 231, 222, 0.11);
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--bg);
+    color: var(--ink);
+  }
+
+  ::selection {
+    background-color: var(--sakura-soft);
+    color: var(--ink);
+  }
+
+  code,
+  pre,
+  kbd,
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+}
+
+.font-editorial {
+  font-family: var(--font-serif);
+}
+
+/* 和纸微纹理与顶部双色轻雾晕染 */
+.astral-mist-bg {
+  background-image:
+    radial-gradient(60rem 28rem at 16% -6%, var(--mist-indigo), transparent 65%),
+    radial-gradient(46rem 24rem at 86% -4%, var(--mist-sakura), transparent 62%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat, repeat;
+  background-size:
+    auto,
+    auto,
+    180px 180px;
+}
+
+.astral-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 2px rgba(26, 28, 34, 0.04),
+    0 10px 28px -18px rgba(26, 28, 34, 0.09);
+}
+
+html[data-theme="dark"] .astral-card {
+  box-shadow:
+    inset 0 1px 0 rgba(236, 231, 222, 0.06),
+    0 12px 32px -16px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes editorialFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.editorial-enter {
+  animation: editorialFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editorial-enter {
+    animation: none;
+  }
+}
+
+/* Markdown 文章排版 */
+.prose-article {
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.prose-article > *:first-child {
+  margin-top: 0;
+}
+
+.prose-article h1,
+.prose-article h2,
+.prose-article h3,
+.prose-article h4 {
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  scroll-margin-top: 5.5rem;
+}
+
+.prose-article h1,
+.prose-article h2,
+.prose-article h3 {
+  font-family: var(--font-serif);
+}
+
+.prose-article h1 {
+  font-size: 1.875rem;
+  line-height: 1.25;
+  margin: 2.25rem 0 1rem;
+}
+
+.prose-article h2 {
+  font-size: 1.45rem;
+  line-height: 1.35;
+  margin: 2.25rem 0 0.9rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.prose-article h3 {
+  font-size: 1.175rem;
+  line-height: 1.45;
+  margin: 1.75rem 0 0.7rem;
+}
+
+.prose-article p {
+  margin: 1.15rem 0;
+}
+
+.prose-article a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  transition:
+    color 0.15s ease,
+    text-decoration-color 0.15s ease;
+}
+
+.prose-article a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: var(--accent-hover);
+}
+
+.prose-article ul,
+.prose-article ol {
+  margin: 1.1rem 0;
+  padding-left: 1.5rem;
+}
+
+.prose-article ul {
+  list-style-type: disc;
+}
+
+.prose-article ol {
+  list-style-type: decimal;
+}
+
+.prose-article li {
+  margin: 0.35rem 0;
+}
+
+.prose-article blockquote {
+  margin: 1.5rem 0;
+  padding: 0.75rem 1.15rem;
+  border-left: 3px solid var(--accent);
+  background-color: var(--surface-subtle);
+  border-radius: 0 0.65rem 0.65rem 0;
+  color: var(--muted);
+}
+
+.prose-article blockquote > p {
+  margin: 0.35rem 0;
+}
+
+.prose-article hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+.prose-article img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.85rem;
+  border: 1px solid var(--border);
+  margin: 1.5rem auto;
+}
+
+.prose-article a > img {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0.25rem 0.35rem;
+  border: 0;
+  border-radius: 0.375rem;
+}
+
+html[data-theme="dark"] .prose-article img[src*="simple-icons"],
+html[data-theme="dark"] .prose-article img[src*="simpleicons"] {
+  filter: invert(0.92);
+}
+
+.prose-article :not(pre) > code {
+  font-size: 0.86em;
+  padding: 0.15rem 0.42rem;
+  border-radius: 0.4rem;
+  background-color: var(--surface-subtle);
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+
+.prose-article .table-wrap {
+  width: 100%;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+
+.prose-article table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.92rem;
+}
+
+.prose-article .table-wrap > table {
+  margin: 0;
+}
+
+.prose-article th,
+.prose-article td {
+  border: 1px solid var(--border);
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+}
+
+.prose-article td > div {
+  max-width: 100%;
+}
+
+.prose-article th {
+  background-color: var(--surface-subtle);
+  font-weight: 600;
+}
+
+/* Shiki 代码块容器与双主题 */
+.prose-article .code-block {
+  margin: 1.5rem 0;
+  border-radius: 0.85rem;
+  border: 1px solid var(--code-border);
+  background-color: var(--code-bg);
+  overflow: hidden;
+}
+
+.prose-article .code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.48rem 0.9rem;
+  border-bottom: 1px solid var(--code-border);
+  background-color: var(--surface-subtle);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.prose-article .code-block-lang {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.prose-article .code-copy-btn {
+  padding: 0.18rem 0.55rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.prose-article .code-copy-btn:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.prose-article .code-block pre.shiki {
+  margin: 0;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  font-size: 0.86rem;
+  line-height: 1.65;
+  background-color: transparent !important;
+}
+
+.prose-article .code-block pre.shiki code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+}
+
+html[data-theme="light"] .shiki,
+html[data-theme="light"] .shiki span {
+  color: var(--shiki-light) !important;
+}
+
+html[data-theme="dark"] .shiki,
+html[data-theme="dark"] .shiki span {
+  color: var(--shiki-dark) !important;
+}
